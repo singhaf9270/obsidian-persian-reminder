@@ -67,3 +67,21 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: gh release upload "$RELEASE_TAG" main.js styles.css manifest.json --clobber
+      - name: Publish a versioned release from an explicit release commit
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Release ')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_COMMIT: ${{ github.event.head_commit.message }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          VERSION=$(node -p 'require("./manifest.json").version')
+          EXPECTED="Release $VERSION"
+          if [ "$RELEASE_COMMIT" != "$EXPECTED" ]; then
+            echo "Release commit must exactly match $EXPECTED"
+            exit 1
+          fi
+          gh release create "$VERSION" main.js styles.css manifest.json \
+            --target "$RELEASE_SHA" \
+            --title "Persian Reminder $VERSION" \
+            --notes-file CHANGELOG.md

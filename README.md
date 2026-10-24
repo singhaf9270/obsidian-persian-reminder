@@ -43,6 +43,8 @@ gh attestation verify main.js --repo singhaf9270/obsidian-persian-reminder
 gh attestation verify styles.css --repo singhaf9270/obsidian-persian-reminder
 ```
 
+To publish a new version, update the manifest, package, lockfile, version map, and changelog, then push a commit whose complete message is `Release X.Y.Z` (matching the manifest). The workflow tests, attests, and publishes that exact commit with the three installable files.
+
 ## Bug reports
 
 Please use this repository's Issues tab to report bugs. For mobile issues, include your device model, Obsidian version, and a screenshot when possible.
@@ -54,7 +56,7 @@ Please use this repository's Issues tab to report bugs. For mobile issues, inclu
 
 افزونه‌ای فارسی برای مدیریت وظایف و یادآوری‌ها در **Obsidian** با پشتیبانی از تقویم جلالی، ساعت، هشتگ و مکان.
 
-> **نسخه: 1.0.1** — برای انتخاب تاریخ شمسی، افزونهٔ **Persian Calendar** باید نصب و فعال باشد.
+> **نسخه: 1.0.2** — برای انتخاب تاریخ شمسی، افزونهٔ **Persian Calendar** باید نصب و فعال باشد.
 
 ## ✨ امکانات
 
