@@ -1,6 +1,6 @@
 // Parse, serialize and style task *rows*, without changing hashtag styling.
 const { TASK, STAMP, OLD, PLACE, TAG } = require('./constants');
-const { pad, iso, dateKey, fromISO, jalali, fromJ } = require('./dates');
+const { pad, iso, dateKey, fromISO, jalali, fromJ, en } = require('./dates');
 function cssColor(str) { return /^#[\da-f]{6}$/i.test(str || '') ? str : '#159f9b'; }
 function parseTask(p, raw) {
     const m = TASK.exec(raw);
@@ -9,7 +9,8 @@ function parseTask(p, raw) {
     const body = m[4], all = [...body.matchAll(STAMP)], stamp = all.at(-1), old = OLD.exec(body);
     let date = null, marker = null;
     if (stamp) {
-        const [, j, y, mo, d, h, mi] = stamp;
+        const j = stamp[1];
+        const [y, mo, d, h, mi] = stamp.slice(2).map(value => en(p, value));
         if (+h < 24 && +mi < 60) {
             if (j) {
                 date = fromJ(p, +y, +mo, +d);
@@ -101,5 +102,6 @@ function tagColor(p, item) { for (const t of Object.keys(p.settings.tagColors)) 
 function paintTask(p, el, item) { const color = tagColor(p, item); if (color) {
     el.classList.add('pr-colored-task');
     el.style.setProperty('--pr-task-color', color);
+    el.style.setProperty('--pr-card-color', color);
 } el.classList.add('pr-style-' + p.settings.taskStyle); }
 module.exports = { cssColor, parseTask, buildTask, updateTaskPreservingText, status, tagColor, paintTask };

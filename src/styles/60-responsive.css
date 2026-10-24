@@ -1,82 +1,34 @@
-/* Responsive for mobile and narrow sidebars. */
-
-@media (max-width:950px) {
-  .pr-dashboard-columns {
-    grid-template-columns: 1fr;
-  }
-  .pr-calendar-host {
-    max-width: 420px;
-  }
+/* Adapt to the Obsidian pane width as well as the window width. */
+@container (max-width: 760px) {
+  .pr-dashboard-columns { grid-template-columns: minmax(0, 1fr); }
+  .pr-dashboard-calendar { order: -1; }
+  .pr-pinned-list { grid-template-columns: minmax(0, 1fr); }
+  .pr-view-heading h2 { font-size: 1.2em; }
+  .pr-view-header { flex-wrap: wrap; }
 }
-
-@media (max-width:670px) {
-  .pr-dashboard {
-    padding: 11px;
-  }
-  .pr-stats {
-    grid-template-columns: repeat(2,minmax(0,1fr));
-  }
-  .pr-pinned-list {
-    grid-template-columns: 1fr;
-  }
-  .pr-dashboard-head h2 {
-    font-size: 1.2em;
-  }
-  .pr-dashboard-day,.pr-dashboard-calendar,.pr-pinned-section {
-    padding: 12px;
-  }
-  .pr-filter-form {
-    grid-template-columns: 100px 1fr;
-  }
-  .pr-filter-form>.pr-add {
-    grid-column: 1/-1;
-  }
-  .pr-modal .modal-content {
-    padding: 12px;
-  }
-  .pr-clock-face {
-    width: 188px;
-    height: 188px;
-  }
+@container (max-width: 480px) {
+  .pr-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-block: 16px; }
+  .pr-stat { padding: 12px; gap: 5px; }
+  .pr-filter-form { grid-template-columns: 85px minmax(0, 1fr); }
+  .pr-filter-form > button { grid-column: 1 / -1; }
+  .pr-section-head .pr-muted { display: none; }
+  .pr-view-controls { margin-inline-start: auto; }
 }
-
-@media (max-width:390px) {
-  .pr-modal {
-    width: calc(100vw - 10px);
-  }
-  .pr-modal .modal-content {
-    padding: 10px;
-  }
-  .pr-dashboard-head {
-    flex-wrap: wrap;
-  }
-  .pr-sidebar {
-    padding: 9px 7px;
-  }
-  .pr-calendar-day {
-    min-height: 30px;
-  }
-  .pr-card-actions {
-    gap: 0;
-  }
-  .pr-clock-face {
-    width: 175px;
-    height: 175px;
-  }
+@media (max-width: 670px) {
+  .pr-dashboard { padding: 15px 12px; }
+  .pr-dashboard-day, .pr-dashboard-calendar, .pr-pinned-section { padding: 14px; }
+  .pr-view-header { flex-wrap: wrap; }
+  .pr-dashboard .pr-view-heading h2 { font-size: 1.17em; }
+  .pr-dashboard .pr-view-controls { margin-inline-start: auto; }
+  .pr-dashboard-columns { grid-template-columns: minmax(0, 1fr); }
+  .pr-dashboard-calendar { order: -1; }
+  .pr-pinned-list { grid-template-columns: minmax(0, 1fr); }
+  .pr-root .pr-search, .pr-root .pr-input, .pr-root .pr-select { font-size: 16px; }
 }
-
-@media (hover:none) {
-  .pr-card-action,.pr-icon,.pr-calendar-day {
-    min-height: 32px;
-  }
-  .pr-inline-clock {
-    min-width: 29px;
-    min-height: 29px;
-  }
+@media (hover: none) {
+  .pr-card-action, .pr-icon, .pr-calendar-day { min-height: 36px; }
+  .pr-inline-clock { min-width: 29px; min-height: 29px; }
 }
-
-@media (prefers-reduced-motion:reduce) {
-  .pr-root *,.pr-modal * {
-    transition: none;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .pr-root *, .pr-modal *, .pr-settings * { transition: none; scroll-behavior: auto; }
 }

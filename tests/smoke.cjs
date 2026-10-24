@@ -22,6 +22,8 @@ assert.equal(item.title, 'جلسه');
 assert.equal(item.place, 'مدرسه');
 assert.deepEqual(item.tags, ['مهم']);
 assert.equal(item.at, '2026-12-04T12:00');
+assert.equal(parseTask(mockPlugin, raw.replace('1405-09-13 12:00', '۱۴۰۵-۰۹-۱۳ ۱۲:۰۰')).at, item.at);
+assert.equal(parseTask(mockPlugin, raw.replace('1405-09-13 12:00', '١٤٠٥-٠٩-١٣ ١٢:٠٠')).at, item.at);
 assert.equal(dateFa(mockPlugin, fromISO(item.at)), '۱۴۰۵/۰۹/۱۳');
 assert.equal(tagColor(mockPlugin,item), '#fc7777');
 const newLine = updateTaskPreservingText(mockPlugin, raw, {...item, at:'2026-12-04T15:30'});
@@ -54,8 +56,8 @@ assert.equal(typeof fresh,'function');
 assert.deepEqual(Object.getOwnPropertyNames(fresh.prototype), [
   'constructor', 'onload', 'onunload', 'api', 'persist', 'applyTheme',
   'requestEditorUpdate', 'show', 'sidebar', 'dashboard', 'create', 'edit',
-  'destination', 'editor', 'openFromCM', 'openTask', 'scanAll', 'scan',
+  'destination', 'dailyDestination', 'editor', 'openFromCM', 'openTask', 'scanAll', 'scan',
   'indexText', 'items', 'refresh', 'findLine', 'change', 'remove',
-  'add', 'openFile', 'reading', 'notify'
+  'add', 'openFile', 'reading', 'showAlerts', 'notify'
 ]);
 console.log('OK: Jalali parse/write, saved task metadata, task colors, output module load and plugin methods.');

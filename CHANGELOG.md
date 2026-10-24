@@ -1,3 +1,27 @@
+## 1.0.4
+
+- Schedule the next reminder deadline directly, with a watchdog and rescans after resume or delayed Persian Calendar startup.
+- Do not mark hidden or failed alerts as delivered; accept Persian and Arabic-Indic digits in reminder markers.
+- Show one compact alert card at a time on desktop and mobile, with completion, snooze and next-reminder actions.
+- Add an optional Templater daily template picker. Await rendering before inserting a task, preserve existing notes and serialize concurrent writes to one daily note.
+- Default the sidebar to all active tasks.
+- Use one gradient surface for real task cards and the settings preview; add gradient angle and card tint controls.
+- Add configurable remaining-time colors for today, overdue and completed tasks, plus editable day thresholds with nearest-range precedence.
+- Add scheduling, Templater, color-rule and structural UI integration regression tests.
+
+## 1.0.3
+
+- Add queued in-app due-time alerts with complete, snooze and open-note actions, a preview button and configurable alert mode.
+
+- Organize settings into General, Daily notes, Appearance and Hashtag pages, with live previews and per-badge resets.
+- Share headers, day navigation, calendars, statistics and card styles between the sidebar and dashboard.
+- Route new tasks from both views to the selected day’s note, supporting configurable folders, Jalali/Gregorian filenames and optional core Daily notes settings.
+- Insert tasks under the configured heading while preserving existing sections, frontmatter, line endings and unsaved editor text.
+- Give the modal one scrollable form with a fixed header/footer; track the mobile visual viewport and reveal the focused input above the keyboard.
+- Preserve search focus, filter drafts and calendar navigation during background refreshes.
+- Prevent duplicate saves while a write is in progress and improve control labels.
+- Add regression tests for daily-note writes and keyboard event handling.
+
 ## 1.0.2
 
 - Fix reported CSS compatibility warnings in the modal, sidebar, dashboard, and task cards.

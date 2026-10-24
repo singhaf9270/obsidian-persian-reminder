@@ -9,20 +9,29 @@ const { SIDE, DASH, DEFAULTS, PALETTES, TASK, PLACE } = require("src/core/consta
 const { cssColor, parseTask, buildTask, status, paintTask } = require("src/core/tasks.js");
 const { fromISO, dateFa, clockFa } = require("src/core/dates.js");
 const { E, I } = require("src/shared/dom.js");
+const { dailyNotePath, dailyOptions, notePath, appendLine, insertDailyTask, createDailyFromTemplate, withNoteWrite } = require("src/core/daily-notes.js");
 const { refreshEffect, editorExtension } = require("src/editor/widgets.js");
 const { TaskModal } = require("src/ui/task-modal.js");
+const { ReminderAlert } = require("src/ui/reminder-alert.js");
+const { ReminderScheduler, reminderKey, pendingReminders } = require("src/core/reminders.js");
+const { gradientAngle, cardTint, contrastText } = require("src/core/appearance.js");
 const { Sidebar } = require("src/views/sidebar.js");
 const { Dashboard } = require("src/views/dashboard.js");
 const { SettingsTab } = require("src/settings.js");
 module.exports = class PersianReminder extends Plugin {
     async onload() {
         this.settings = { ...DEFAULTS, ...await this.loadData() };
-        this.settings.tagColors ||= {};
+        this.settings.tagColors = { ...(this.settings.tagColors || {}) };
         this.settings.pinned ||= [];
-        this.settings.notified ||= {};
+        this.settings.notified = { ...(this.settings.notified || {}) };
+        this.settings.remainingRules = (this.settings.remainingRules || DEFAULTS.remainingRules).map(rule => ({ ...rule }));
+        this.settings.remainingColors = Object.fromEntries(Object.keys(DEFAULTS.remainingColors).map(key =>
+            [key, { ...DEFAULTS.remainingColors[key], ...(this.settings.remainingColors?.[key] || {}) }]));
         this.index = new Map();
         this.scanSerial = new Map();
         this.scanTimers = new Map();
+        this.unloading = false;
+        this.scheduler = new ReminderScheduler(this);
         this.applyTheme();
         this.registerView(SIDE, leaf => new Sidebar(leaf, this));
         this.registerView(DASH, leaf => new Dashboard(leaf, this));
@@ -44,12 +53,18 @@ module.exports = class PersianReminder extends Plugin {
         this.registerEvent(this.app.workspace.on('editor-change', (editor, view) => { if (!view?.file)
             return; const path = view.file.path; if (this.scanTimers.has(path))
             window.clearTimeout(this.scanTimers.get(path)); this.scanTimers.set(path, window.setTimeout(() => { this.scanTimers.delete(path); this.indexText(path, editor.getValue()); }, 350)); }));
-        this.app.workspace.onLayoutReady(async () => { await this.scanAll(); if (!this.api())
-            new Notice('برای تقویم شمسی افزونه Persian Calendar را فعال کنید'); await this.notify(); });
-        this.registerInterval(window.setInterval(() => { this.notify(); this.refresh(); }, 30000));
+        const resume = () => { if (!document.hidden) this.scheduler.wake(true); };
+        this.registerDomEvent(document, 'visibilitychange', resume);
+        this.registerDomEvent(window, 'focus', resume);
+        this.registerDomEvent(window, 'pageshow', resume);
+        this.app.workspace.onLayoutReady(async () => {
+            if (this.unloading) return;
+            await this.scheduler.start();
+            if (!this.api()) new Notice('برای تقویم شمسی افزونه Persian Calendar را فعال کنید');
+        });
     }
-    onunload() { for (const timer of this.scanTimers.values())
-        window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-accent-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
+    onunload() { this.unloading = true; this.scheduler?.stop(); this.alertModal?.close(); for (const timer of this.scanTimers.values())
+        window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-gradient-angle', '--pr-card-tint', '--pr-accent-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border','text'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
     api() { return this.app.plugins.getPlugin('persian-calendar')?.api || null; }
     async persist() { await this.saveData(this.settings); }
     applyTheme() {
@@ -60,8 +75,11 @@ module.exports = class PersianReminder extends Plugin {
         for (const type of ['inline','date','remaining']) {
             const v = { ...defaults[type], ...(colors[type] || {}) };
             for (const [k, val] of Object.entries(v)) vars[`--pr-${type}-${k}`] = val;
+            if (type !== 'inline') vars[`--pr-${type}-text`] = contrastText(v.a, v.b);
         }
         for (const [key, value] of Object.entries(vars)) document.body.style.setProperty(key, cssColor(value));
+        document.body.style.setProperty('--pr-gradient-angle', gradientAngle(this.settings) + 'deg');
+        document.body.style.setProperty('--pr-card-tint', cardTint(this.settings) + '%');
         this.refresh(); this.requestEditorUpdate();
     }
     requestEditorUpdate() { for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
@@ -83,6 +101,7 @@ module.exports = class PersianReminder extends Plugin {
     edit(item, tab = 'date') { if (!this.api())
         return new Notice('افزونه Persian Calendar فعال نیست'); new TaskModal(this, item, null, tab).open(); }
     destination() { return this.app.workspace.getActiveFile()?.path || this.settings.defaultNote; }
+    dailyDestination(date) { return dailyNotePath(this, date); }
     editor(path) { return this.app.workspace.getLeavesOfType('markdown').map(l => l.view).find(v => v instanceof MarkdownView && v.file?.path === path) || null; }
     openFromCM(cm, line, raw) { const view = this.app.workspace.getLeavesOfType('markdown').map(l => l.view).find(v => v instanceof MarkdownView && v.editor?.cm === cm); if (view?.file)
         this.openTask(view.file.path, line, raw);
@@ -103,12 +122,14 @@ module.exports = class PersianReminder extends Plugin {
         console.error('[Persian Reminder scan]', e);
     } }
     indexText(path, source, refresh = true) { const arr = []; source.split(/\r?\n/).forEach((raw, line) => { const it = parseTask(this, raw); if (it?.at)
-        arr.push({ ...it, path, line }); }); this.index.set(path, arr); if (refresh)
+        arr.push({ ...it, path, line }); }); this.index.set(path, arr); this.scheduler?.wake(); if (refresh)
         this.refresh(); }
     items() { return [...this.index.values()].flat().sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at)); }
     refresh() { for (const type of [SIDE, DASH])
-        for (const leaf of this.app.workspace.getLeavesOfType(type))
-            leaf.view.render?.(); }
+        for (const leaf of this.app.workspace.getLeavesOfType(type)) {
+            if (leaf.view.refresh) leaf.view.refresh();
+            else leaf.view.render?.();
+        } }
     findLine(lines, item) { if (lines[item.line] === item.raw)
         return item.line; const hits = []; lines.forEach((l, i) => { if (l === item.raw)
         hits.push(i); }); return hits.length === 1 ? hits[0] : -1; }
@@ -141,38 +162,57 @@ module.exports = class PersianReminder extends Plugin {
     } }
     async remove(item) { return this.change(item, old => { const parsed = parseTask(this, old), m = TASK.exec(old); if (!m || !parsed)
         return old; return m[1] + m[2] + m[3] + [parsed.title, ...parsed.tags.map(t => '#' + t), parsed.place ? `📍[${parsed.place}]` : null].filter(Boolean).join(' '); }); }
-    async add(path, values) { let target = (path || this.settings.defaultNote).trim() || this.settings.defaultNote; if (!target.toLowerCase().endsWith('.md'))
-        target += '.md'; const line = buildTask(this, null, values); try {
-        let file = this.app.vault.getAbstractFileByPath(target);
-        if (!file) {
-            const parts = target.split('/');
-            for (let i = 1; i < parts.length; i++) {
-                const folder = parts.slice(0, i).join('/');
-                if (!this.app.vault.getAbstractFileByPath(folder))
-                    await this.app.vault.createFolder(folder);
-            }
-            file = await this.app.vault.create(target, line + '\n');
-        }
-        else if (!(file instanceof TFile))
-            return new Notice('مسیر، فایل Markdown نیست'), false;
-        else {
-            const view = this.editor(file.path);
-            if (view) {
-                const ed = view.editor, source = ed.getValue(), sep = source.includes('\r\n') ? '\r\n' : '\n';
-                ed.replaceRange((source && !source.endsWith('\n') ? sep : '') + line + sep, ed.offsetToPos(source.length));
-                this.indexText(file.path, ed.getValue());
+    async add(path, values, options = {}) {
+        try {
+            const date = fromISO(values.at);
+            const target = options.daily ? this.dailyDestination(date) : notePath(path || this.settings.defaultNote);
+            const line = buildTask(this, null, values);
+            const insert = source => options.daily
+                ? insertDailyTask(source, line, dailyOptions(this).heading) : appendLine(source, line);
+            return await withNoteWrite(this, target, async () => {
+                let file = this.app.vault.getAbstractFileByPath(target);
+                let alreadyInserted = false;
+                if (!file) {
+                    const parts = target.split('/');
+                    for (let i = 1; i < parts.length; i++) {
+                        const folder = parts.slice(0, i).join('/');
+                        if (!this.app.vault.getAbstractFileByPath(folder)) {
+                            try { await this.app.vault.createFolder(folder); }
+                            catch (error) {
+                                const existing = this.app.vault.getAbstractFileByPath(folder);
+                                if (!existing || existing instanceof TFile) throw error;
+                            }
+                        }
+                    }
+                    if (options.daily && this.settings.dailyUseTemplater) {
+                        file = await createDailyFromTemplate(this, target);
+                    } else {
+                        file = await this.app.vault.create(target, insert(''));
+                        alreadyInserted = true;
+                    }
+                }
+                if (!(file instanceof TFile)) { new Notice('مسیر، فایل Markdown نیست'); return false; }
+                if (!alreadyInserted) {
+                    const view = this.editor(file.path);
+                    if (view) {
+                        const ed = view.editor, source = ed.getValue(), next = insert(source);
+                        let at = 0;
+                        while (at < source.length && source[at] === next[at]) at++;
+                        let end = source.length, nextEnd = next.length;
+                        while (end > at && nextEnd > at && source[end - 1] === next[nextEnd - 1]) { end--; nextEnd--; }
+                        ed.replaceRange(next.slice(at, nextEnd), ed.offsetToPos(at), ed.offsetToPos(end));
+                        this.indexText(file.path, ed.getValue());
+                        return true;
+                    }
+                    await this.app.vault.process(file, insert);
+                }
+                await this.scan(file);
                 return true;
-            }
-            await this.app.vault.process(file, source => { const sep = source.includes('\r\n') ? '\r\n' : '\n'; return source + (source && !source.endsWith('\n') ? sep : '') + line + sep; });
+            });
+        } catch (error) {
+            console.error(error); new Notice('خطا در افزودن کار: ' + error.message); return false;
         }
-        await this.scan(file);
-        return true;
     }
-    catch (e) {
-        console.error(e);
-        new Notice('خطا در افزودن کار: ' + e.message);
-        return false;
-    } }
     async openFile(item) { const file = this.app.vault.getAbstractFileByPath(item.path); if (!(file instanceof TFile))
         return; const leaf = this.app.workspace.getLeaf('tab'); await leaf.openFile(file); if (leaf.view instanceof MarkdownView) {
         const editor = leaf.view.editor, n = this.findLine(editor.getValue().split(/\r?\n/), item), line = n < 0 ? item.line : n;
@@ -254,25 +294,37 @@ module.exports = class PersianReminder extends Plugin {
             console.error('[Persian Reminder reading]', e);
         }
     }
-    async notify() { let changed = false, now = Date.now(); for (const item of this.items()) {
-        if (item.done)
-            continue;
-        const d = fromISO(item.at);
-        if (!d)
-            continue;
-        const elapsed = now - d.getTime();
-        if (elapsed < 0 || elapsed > 86400000)
-            continue;
-        const key = item.path + '|' + item.raw;
-        if (this.settings.notified[key])
-            continue;
-        this.settings.notified[key] = now;
-        changed = true;
-        new Notice('⏰ ' + item.title + (item.place ? '\n📍 ' + item.place : ''), 10000);
-    } if (changed) {
-        this.settings.notified = Object.fromEntries(Object.entries(this.settings.notified).sort((a, b) => b[1] - a[1]).slice(0, 500));
-        await this.persist();
-    } }
+    showAlerts(items, preview = false) {
+        if (this.unloading) return;
+        if (preview) return new ReminderAlert(this, items, true).open();
+        if (this.alertModal) this.alertModal.enqueue(items);
+        else {
+            const modal = new ReminderAlert(this, items);
+            this.alertModal = modal;
+            try { modal.open(); }
+            catch (error) { this.alertModal = null; throw error; }
+        }
+    }
+    async notify() {
+        if (this.notifying || this.unloading || this.settings.notificationMode === 'off') return;
+        // Hidden WebViews must not mark unseen dialogs as delivered.
+        if (typeof document !== 'undefined' && document.hidden) return;
+        this.notifying = true;
+        try {
+            const now = Date.now();
+            const due = pendingReminders(this, now).filter(item => fromISO(item.at).getTime() <= now);
+            if (!due.length) return;
+            if (this.settings.notificationMode === 'notice') {
+                for (const item of due) new Notice('⏰ ' + item.title + (item.place ? '\n📍 ' + item.place : ''), 10000);
+            } else this.showAlerts(due);
+            // Record delivery only after the alert has actually opened.
+            for (const item of due) this.settings.notified[reminderKey(item)] = now;
+            this.settings.notified = Object.fromEntries(Object.entries(this.settings.notified)
+                .filter(([, time]) => Number(time) >= now - 7 * 86400000));
+            await this.persist();
+        } catch (error) { console.error('[Persian Reminder notify]', error); }
+        finally { this.notifying = false; }
+    }
 };
 
 },
@@ -280,7 +332,7 @@ module.exports = class PersianReminder extends Plugin {
 // Plugin identifiers, task syntax, palettes and default settings.
 const SIDE = 'persian-reminder-sidebar', DASH = 'persian-reminder-dashboard';
 const TASK = /^(\s*(?:[-*+]|\d+[.)])\s+\[)([ xX])(\]\s*)(.*)$/;
-const STAMP = /\(@(j:)?(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})\)/g;
+const STAMP = /\(@(j:)?([0-9۰-۹٠-٩]{4})-([0-9۰-۹٠-٩]{2})-([0-9۰-۹٠-٩]{2})\s+([0-9۰-۹٠-٩]{2}):([0-9۰-۹٠-٩]{2})\)/g;
 const OLD = /<!--\s*pr:([^|>]+)\|(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\|([^>]*?)\s*-->/;
 const PLACE = /📍\[([^\]\r\n]*)\]/g;
 const TAG = /(?:^|\s)#([\p{L}\p{N}_-]+)/gu;
@@ -305,23 +357,45 @@ const DEFAULTS = {
   clickMode: 'double',
   dateFormat: 'jalali',
   palette: 'lavender',
+  taskStyle: 'soft',
+  stampStyle: 'soft',
   inlineTextColor: '#182e3a',
   badgeColors: { inline: {a:'#67D5ED',b:'#A5B4FC',border:'#478EBB'}, date:{a:'#93C5FD',b:'#BAE6FD',border:'#548BCB'}, remaining:{a:'#6EE7B7',b:'#A7F3D0',border:'#39A781'} },
+  gradientAngle: 120,
+  cardTint: 10,
+  remainingRulesEnabled: true,
+  remainingColors: {
+    today: { a: '#FCD34D', b: '#FDE68A', border: '#D5A42B' },
+    overdue: { a: '#FDA4AF', b: '#FECDD3', border: '#D37888' },
+    done: { a: '#CBD5E1', b: '#E2E8F0', border: '#94A3B8' }
+  },
+  remainingRules: [
+    { id: 'one-day', days: 1, enabled: true, a: '#FDBA74', b: '#FED7AA', border: '#D99550' },
+    { id: 'one-week', days: 7, enabled: true, a: '#93C5FD', b: '#BAE6FD', border: '#548BCB' }
+  ],
+  dailyUseTemplater: false,
+  dailyTemplatePath: '',
   soonHours: 24,
+  notificationMode: 'modal',
+  snoozeMinutes: 10,
   defaultNote: 'یادآوری‌ها.md',
   dailyFolder: '',        // '' = root; otherwise e.g. 'Daily'
   dailyHeading: '## یادآوری‌ها',
+  dailyCalendar: 'gregorian',
+  dailyFormat: 'YYYY-MM-DD',
+  dailyUseCore: false,
   tagColors: {},
   pinned: [],
   notified: {},
 };
 
 module.exports = { SIDE, DASH, TASK, STAMP, OLD, PLACE, TAG, PALETTES, DEFAULTS };
+
 },
 "src/core/tasks.js": function(module, exports, require) {
 // Parse, serialize and style task *rows*, without changing hashtag styling.
 const { TASK, STAMP, OLD, PLACE, TAG } = require("src/core/constants.js");
-const { pad, iso, dateKey, fromISO, jalali, fromJ } = require("src/core/dates.js");
+const { pad, iso, dateKey, fromISO, jalali, fromJ, en } = require("src/core/dates.js");
 function cssColor(str) { return /^#[\da-f]{6}$/i.test(str || '') ? str : '#159f9b'; }
 function parseTask(p, raw) {
     const m = TASK.exec(raw);
@@ -330,7 +404,8 @@ function parseTask(p, raw) {
     const body = m[4], all = [...body.matchAll(STAMP)], stamp = all.at(-1), old = OLD.exec(body);
     let date = null, marker = null;
     if (stamp) {
-        const [, j, y, mo, d, h, mi] = stamp;
+        const j = stamp[1];
+        const [y, mo, d, h, mi] = stamp.slice(2).map(value => en(p, value));
         if (+h < 24 && +mi < 60) {
             if (j) {
                 date = fromJ(p, +y, +mo, +d);
@@ -422,6 +497,7 @@ function tagColor(p, item) { for (const t of Object.keys(p.settings.tagColors)) 
 function paintTask(p, el, item) { const color = tagColor(p, item); if (color) {
     el.classList.add('pr-colored-task');
     el.style.setProperty('--pr-task-color', color);
+    el.style.setProperty('--pr-card-color', color);
 } el.classList.add('pr-style-' + p.settings.taskStyle); }
 module.exports = { cssColor, parseTask, buildTask, updateTaskPreservingText, status, tagColor, paintTask };
 
@@ -435,7 +511,7 @@ function localDateKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-$
 function fromISO(v) { const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)$/.exec(v || ''); if (!m)
     return null; const [y, mo, d, h, mi] = m.slice(1).map(Number); const x = new Date(y, mo - 1, d, h, mi); return x.getFullYear() === y && x.getMonth() === mo - 1 && x.getDate() === d && x.getHours() === h && x.getMinutes() === mi ? x : null; }
 function fa(p, x) { return p.api()?.toFaNumber?.(String(x)) ?? String(x).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[+d]); }
-function en(p, x) { return p.api()?.toEnNumber?.(String(x)) ?? String(x).replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))); }
+function en(p, x) { return String(p.api()?.toEnNumber?.(String(x)) ?? x).replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))); }
 function jalali(p, d) { return p.api()?.gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate()) ?? null; }
 function fromJ(p, y, m, d) { const a = p.api(); if (!a)
     return null; const x = a.jalaliToDate(y, m, d); if (!(x instanceof Date) || isNaN(x.getTime()))
@@ -448,7 +524,7 @@ module.exports = { pad, iso, dateKey, localDateKey, fromISO, fa, en, jalali, fro
 "src/shared/dom.js": function(module, exports, require) {
 // DOM helpers shared by every Obsidian UI view.
 const { setIcon } = require('obsidian');
-function E(parent, tag, cls = '', text) { const n = document.createElement(tag); if (cls)
+function E(parent, tag, cls = '', text) { const n = (parent.ownerDocument || document).createElement(tag); if (cls)
     n.className = cls; if (text !== undefined)
     n.textContent = String(text); parent.appendChild(n); return n; }
 function I(parent, name, cls = '') { const n = E(parent, 'span', cls); setIcon(n, name); return n; }
@@ -457,6 +533,149 @@ function B(parent, label, glyph, cls, fn) { const b = E(parent, 'button', cls); 
     E(b, 'span', '', label); if (fn)
     b.addEventListener('click', fn); return b; }
 module.exports = { E, I, B };
+
+},
+"src/core/daily-notes.js": function(module, exports, require) {
+// Resolve the selected day's note without consulting the active editor.
+const { moment } = require('obsidian');
+const { jalali, pad, en } = require("src/core/dates.js");
+
+function dailyOptions(p) {
+    // Daily notes has no public settings API. Treat its optional configuration
+    // as a convenience and fall back to this plugin's explicit settings.
+    const core = p.settings.dailyUseCore
+        ? p.app.internalPlugins?.plugins?.['daily-notes']?.instance?.options : null;
+    return {
+        folder: core ? (core.folder || '') : (p.settings.dailyFolder || ''),
+        format: core ? (core.format || 'YYYY-MM-DD') : (p.settings.dailyFormat || 'YYYY-MM-DD'),
+        calendar: core ? 'gregorian' : (p.settings.dailyCalendar || 'gregorian'),
+        heading: normalizeHeading(p.settings.dailyHeading),
+        source: core ? 'obsidian' : 'custom'
+    };
+}
+
+function normalizeHeading(value) {
+    const text = String(value ?? '').replace(/[\r\n]/g, ' ').trim();
+    return !text || /^#{1,6}\s+\S/.test(text) ? text : '## ' + text;
+}
+
+function notePath(value) {
+    const text = String(value || '').trim().replace(/\\/g, '/');
+    if (!text || text.startsWith('/') || /[\u0000-\u001f<>:"|?*]/.test(text))
+        throw new Error('مسیر یادداشت معتبر نیست');
+    const parts = text.split('/').filter(Boolean);
+    if (parts.some(part => part === '.' || part === '..'))
+        throw new Error('مسیر یادداشت باید داخل ولت باشد');
+    const path = parts.join('/');
+    return /\.md$/i.test(path) ? path : path + '.md';
+}
+
+function dailyNotePath(p, date) {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime()))
+        throw new Error('تاریخ یادداشت معتبر نیست');
+    const options = dailyOptions(p);
+    let filename;
+    if (options.calendar === 'gregorian' && typeof moment === 'function') {
+        filename = moment(date).locale('en').format(options.format);
+    } else {
+        const j = options.calendar === 'jalali' ? jalali(p, date) : null;
+        if (options.calendar === 'jalali' && !j)
+            throw new Error('برای نام‌گذاری شمسی، افزونه Persian Calendar را فعال کنید');
+        const year = j ? j.jy : date.getFullYear();
+        const month = j ? j.jm : date.getMonth() + 1;
+        const day = j ? j.jd : date.getDate();
+        const values = { YYYY: String(year), YY: String(year).slice(-2), MM: pad(month), M: String(month), DD: pad(day), D: String(day) };
+        filename = options.format.replace(/\[([^\]]*)\]|j?(YYYY|YY|MM|DD|M|D)/g,
+            (_, literal, token) => literal !== undefined ? literal : values[token]);
+    }
+    // Store ASCII digits for paths, even when the host's locale is Persian.
+    filename = en(p, filename).trim();
+    if (!filename) throw new Error('قالب نام یادداشت خالی است');
+    const folder = String(options.folder).trim().replace(/^\/+|\/+$/g, '');
+    return notePath([folder, filename].filter(Boolean).join('/'));
+}
+
+function appendLine(source, line) {
+    const sep = source.includes('\r\n') ? '\r\n' : '\n';
+    return source + (source && !source.endsWith('\n') ? sep : '') + line + sep;
+}
+
+function insertDailyTask(source, line, heading) {
+    heading = normalizeHeading(heading);
+    if (!heading) return appendLine(source, line);
+    const sep = source.includes('\r\n') ? '\r\n' : '\n';
+    const lines = source.split(/\r?\n/);
+    const level = heading.match(/^#+/)[0].length;
+    let start = -1, end = lines.length, fence = null;
+    let frontmatter = lines[0]?.replace(/^\uFEFF/, '').trim() === '---';
+    for (let i = 0; i < lines.length; i++) {
+        const text = lines[i];
+        if (frontmatter) {
+            if (i > 0 && /^(---|\.\.\.)\s*$/.test(text)) frontmatter = false;
+            continue;
+        }
+        const marker = /^ {0,3}(`{3,}|~{3,})/.exec(text)?.[1];
+        if (marker) {
+            if (!fence) fence = marker;
+            else if (marker[0] === fence[0] && marker.length >= fence.length &&
+                /^ {0,3}(`+|~+)\s*$/.test(text)) fence = null;
+            continue;
+        }
+        if (fence) continue;
+        const h = /^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$/.exec(text);
+        if (!h) continue;
+        if (start < 0 && h[1].length === level && h[2] === heading.replace(/^#+\s+/, '')) start = i;
+        else if (start >= 0 && h[1].length <= level) { end = i; break; }
+    }
+    if (start < 0) {
+        const prefix = source && !source.endsWith('\n') ? sep : '';
+        const gap = source && !source.endsWith(sep + sep) ? sep : '';
+        return source + prefix + gap + heading + sep + line + sep;
+    }
+    let insert = end;
+    while (insert > start + 1 && !lines[insert - 1].trim()) insert--;
+    lines.splice(insert, 0, line);
+    return lines.join(sep) + (lines.at(-1) === '' ? '' : sep);
+}
+
+module.exports = { dailyOptions, dailyNotePath, normalizeHeading, notePath, appendLine, insertDailyTask };
+
+async function createDailyFromTemplate(p, target) {
+    const { TFile } = require('obsidian');
+    const plugin = p.app.plugins.getPlugin('templater-obsidian');
+    const engine = plugin?.templater;
+    if (typeof engine?.create_new_note_from_template !== 'function')
+        throw new Error('افزونه Templater را فعال کنید یا گزینهٔ قالب Templater را خاموش کنید');
+    const path = p.settings.dailyTemplatePath;
+    const template = path ? p.app.vault.getAbstractFileByPath(path) : null;
+    if (!(template instanceof TFile) || template.extension !== 'md')
+        throw new Error('در تنظیمات یادداشت روز، یک قالب معتبر Templater انتخاب کنید');
+    if (template.path === target) throw new Error('قالب و یادداشت مقصد باید مسیر متفاوتی داشته باشند');
+    const slash = target.lastIndexOf('/');
+    const folder = slash < 0 ? p.app.vault.getRoot() : target.slice(0, slash);
+    const name = target.slice(slash + 1).replace(/\.md$/i, '');
+    // Await the native Templater pipeline, including parsing and completion
+    // hooks, before inserting any task. Never write raw <% ... %> commands.
+    const file = await engine.create_new_note_from_template(template, folder, name, false);
+    if (!(file instanceof TFile)) throw new Error('Templater نتوانست یادداشت روز را بسازد؛ تنظیمات قالب را بررسی کنید');
+    if (file.path !== target) throw new Error('قالب Templater مسیر یادداشت را تغییر داده است؛ دستور تغییر نام یا پوشه را در قالب روزانه اصلاح کنید');
+    return file;
+}
+module.exports.createDailyFromTemplate = createDailyFromTemplate;
+
+// Serialize writes for the same day: Templater's filename de-duplication must
+// never create a second daily note when two panels add tasks concurrently.
+const noteWrites = new WeakMap();
+async function withNoteWrite(p, target, write) {
+    let queue = noteWrites.get(p);
+    if (!queue) { queue = new Map(); noteWrites.set(p, queue); }
+    const previous = queue.get(target) || Promise.resolve();
+    const pending = previous.catch(() => {}).then(write);
+    queue.set(target, pending);
+    try { return await pending; }
+    finally { if (queue.get(target) === pending) queue.delete(target); }
+}
+module.exports.withNoteWrite = withNoteWrite;
 
 },
 "src/editor/widgets.js": function(module, exports, require) {
@@ -535,76 +754,182 @@ module.exports = { refreshEffect, editorExtension };
 
 },
 "src/ui/task-modal.js": function(module, exports, require) {
-// Add/edit reminder modal; date tab and time tab.
 const { Modal, Notice } = require('obsidian');
 const { E, I, B } = require("src/shared/dom.js");
 const { fromISO, iso, dateFa, clockFa } = require("src/core/dates.js");
 const { updateTaskPreservingText } = require("src/core/tasks.js");
 const { Calendar } = require("src/ui/calendar.js");
 const { MaterialClock } = require("src/ui/material-clock.js");
+const { watchKeyboard } = require("src/ui/keyboard-viewport.js");
+
 class TaskModal extends Modal {
-    constructor(p, item = null, initial = null, tab = 'date') { super(p.app); this.p = p; this.item = item; this.date = item?.at ? fromISO(item.at) : (initial ? new Date(initial) : new Date(Date.now() + 3600000)); if (!this.date)
-        this.date = new Date(); this.hour = this.date.getHours(); this.minute = this.date.getMinutes(); this.tab = tab; this.destination = item?.path || p.destination(); }
+    constructor(p, item = null, initial = null, tab = 'date') {
+        super(p.app);
+        this.p = p;
+        this.item = item;
+        this.date = item?.at ? fromISO(item.at) : new Date(Date.now() + 3600000);
+        if (!this.date) this.date = new Date();
+        this.hour = this.date.getHours();
+        this.minute = this.date.getMinutes();
+        if (initial) {
+            const day = new Date(initial);
+            // The panel supplies a day, not midnight as the reminder time.
+            this.date = new Date(day.getFullYear(), day.getMonth(), day.getDate(), this.hour, this.minute);
+        }
+        this.tab = tab;
+        this.useDaily = !item && !!initial;
+        this.destination = item?.path || p.destination();
+        this.saving = false;
+    }
     onOpen() {
         this.modalEl.addClass('pr-modal');
+        this.modalEl.setAttribute('aria-label', this.item ? 'ویرایش کار و یادآوری' : 'افزودن کار');
         const root = this.contentEl;
         root.replaceChildren();
         const header = E(root, 'div', 'pr-modal-header');
         I(header, this.item ? 'calendar-clock' : 'plus-circle');
-        E(header, 'strong', '', this.item ? 'ویرایش کار و یادآوری' : 'افزودن کار');
-        const field = (label, value, placeholder) => { const wrap = E(root, 'label', 'pr-field'); E(wrap, 'span', '', label); const input = E(wrap, 'input', 'pr-input'); input.value = value || ''; input.placeholder = placeholder || ''; return input; };
-        this.titleInput = field('عنوان کار', this.item?.title || '', 'عنوان کار');
-        if (!this.item) {
-            this.pathInput = field('یادداشت مقصد', this.destination, 'کارها.md');
-        }
-        const tabs = E(root, 'div', 'pr-modal-tabs');
-        this.tabDate = B(tabs, 'تاریخ', 'calendar-days', 'pr-modal-tab', () => this.switchTab('date'));
-        this.tabTime = B(tabs, 'ساعت', 'clock-3', 'pr-modal-tab', () => this.switchTab('time'));
-        this.panel = E(root, 'div', 'pr-picker-panel');
-        this.switchTab(this.tab);
-        const details = E(root, 'details', 'pr-details');
-        const summary = E(details, 'summary', '', 'مکان و هشتگ‌ها (اختیاری)');
+        const heading = E(header, 'div');
+        E(heading, 'strong', '', this.item ? 'ویرایش یادآوری' : 'یک کار تازه');
+        E(heading, 'small', '', 'جزئیات، روز و ساعت را مشخص کنید');
+        this.body = E(root, 'div', 'pr-modal-body');
+        const field = (parent, label, value, placeholder) => {
+            const wrap = E(parent, 'label', 'pr-field');
+            E(wrap, 'span', '', label);
+            const input = E(wrap, 'input', 'pr-input');
+            input.type = 'text';
+            input.value = value || '';
+            input.placeholder = placeholder || '';
+            input.autocomplete = 'off';
+            input.dir = 'auto';
+            return input;
+        };
+        this.titleInput = field(this.body, 'عنوان کار', this.item?.title, 'چه کاری می‌خواهید انجام دهید؟');
+        const details = E(this.body, 'details', 'pr-details');
+        details.open = !!(this.item?.place || this.item?.tags.length);
+        E(details, 'summary', '', 'مکان و هشتگ‌ها');
         const inner = E(details, 'div', 'pr-detail-fields');
-        const other = (label, value, placeholder) => { const box = E(inner, 'label', 'pr-field'); E(box, 'span', '', label); const input = E(box, 'input', 'pr-input'); input.value = value || ''; input.placeholder = placeholder; return input; };
-        this.placeInput = other('مکان', this.item?.place, 'مثلاً مدرسه');
-        this.tagsInput = other('هشتگ‌ها', this.item?.tags.join(' '), 'مهم ضروری');
-        this.summary = E(root, 'div', 'pr-selected-datetime');
+        this.placeInput = field(inner, 'مکان', this.item?.place, 'مثلاً مدرسه');
+        this.tagsInput = field(inner, 'هشتگ‌ها', this.item?.tags.join(' '), '#مهم #مدرسه');
+        this.tagsInput.spellcheck = false;
+        E(inner, 'small', 'pr-field-hint', 'هشتگ‌ها را با فاصله یا ویرگول جدا کنید.');
+        const tabs = E(this.body, 'div', 'pr-modal-tabs');
+        tabs.setAttribute('role', 'tablist');
+        tabs.setAttribute('aria-label', 'انتخاب تاریخ و ساعت');
+        this.tabDate = B(tabs, 'انتخاب روز', 'calendar-days', 'pr-modal-tab', () => this.switchTab('date'));
+        this.tabTime = B(tabs, 'انتخاب ساعت', 'clock-3', 'pr-modal-tab', () => this.switchTab('time'));
+        this.panel = E(this.body, 'div', 'pr-picker-panel');
+        this.panel.setAttribute('role', 'tabpanel');
+        this.switchTab(this.tab);
+        if (!this.item) {
+            const destination = E(this.body, 'div', 'pr-destination-field');
+            const toggle = E(destination, 'label', 'pr-daily-toggle');
+            this.dailyToggle = E(toggle, 'input');
+            this.dailyToggle.type = 'checkbox';
+            this.dailyToggle.checked = this.useDaily;
+            E(toggle, 'span', '', 'ذخیره در یادداشت روز انتخاب‌شده');
+            this.pathInput = field(destination, 'یادداشت مقصد', this.destination, 'کارها.md');
+            this.pathInput.classList.add('pr-path-input');
+            this.dailyToggle.addEventListener('change', () => {
+                if (!this.useDaily) this.destination = this.pathInput.value;
+                this.useDaily = this.dailyToggle.checked;
+                this.updateDestination();
+            });
+            this.pathHint = E(destination, 'small', 'pr-field-hint');
+            this.updateDestination();
+        }
+        const footer = E(root, 'div', 'pr-modal-footer');
+        this.summary = E(footer, 'div', 'pr-selected-datetime');
         this.updateSummary();
-        const actions = E(root, 'div', 'pr-modal-actions');
-        if (this.item)
-            B(actions, 'حذف یادآوری', 'trash-2', 'pr-danger-btn', async () => { if (await this.p.remove(this.item)) {
-                new Notice('یادآوری حذف شد');
-                this.close();
-            } });
+        const actions = E(footer, 'div', 'pr-modal-actions');
+        if (this.item) this.deleteButton = B(actions, 'حذف یادآوری', 'trash-2', 'pr-danger-btn', async () => {
+            if (this.saving) return;
+            this.setSaving(true);
+            try {
+                if (await this.p.remove(this.item)) { new Notice('یادآوری حذف شد'); this.close(); }
+            } finally { this.setSaving(false); }
+        });
         E(actions, 'span', 'pr-spacer');
         B(actions, 'انصراف', null, 'pr-cancel-btn', () => this.close());
-        B(actions, 'ذخیره', 'check', 'pr-save-btn', () => this.save());
+        this.saveButton = B(actions, 'ذخیره', 'check', 'pr-save-btn', () => this.save());
+        this.stopWatching = watchKeyboard(this, this.body);
     }
-    switchTab(tab) { if (this.timePicker) {
-        this.timePicker.destroy();
+    updateDestination() {
+        if (!this.pathInput) return;
+        this.pathInput.readOnly = this.useDaily;
+        try {
+            this.pathInput.value = this.useDaily ? this.p.dailyDestination(this.date) : this.destination;
+            this.pathHint.textContent = this.useDaily
+                ? 'با تغییر روز، مقصد هم تغییر می‌کند. قالب نام و پوشه در تنظیمات افزونه است.'
+                : 'مسیر یک یادداشت داخل ولت؛ یادداشت جدید در صورت نیاز ساخته می‌شود.';
+            this.pathInput.removeAttribute('aria-invalid');
+        } catch (error) {
+            this.pathHint.textContent = error.message;
+            this.pathInput.setAttribute('aria-invalid', 'true');
+        }
+    }
+    switchTab(tab) {
+        this.timePicker?.destroy();
         this.timePicker = null;
-    } this.tab = tab; this.tabDate.classList.toggle('is-active', tab === 'date'); this.tabTime.classList.toggle('is-active', tab === 'time'); this.panel.replaceChildren(); if (tab === 'date') {
-        new Calendar(this.p, this.panel, this.date, d => { this.date = d; this.updateSummary(); });
+        this.tab = tab;
+        for (const [button, active] of [[this.tabDate, tab === 'date'], [this.tabTime, tab === 'time']]) {
+            button.classList.toggle('is-active', active);
+            button.setAttribute('role', 'tab');
+            button.setAttribute('aria-selected', String(active));
+        }
+        this.panel.replaceChildren();
+        if (tab === 'date') new Calendar(this.p, this.panel, this.date, day => {
+            this.date = day;
+            this.updateSummary();
+            this.updateDestination();
+        });
+        else this.timePicker = new MaterialClock(this.p, this.panel, this.hour, this.minute, (hour, minute) => {
+            this.hour = hour;
+            this.minute = minute;
+            this.updateSummary();
+            this.switchTab('date');
+        }, () => this.switchTab('date'));
     }
-    else {
-        this.timePicker = new MaterialClock(this.p, this.panel, this.hour, this.minute, (h, m) => { this.hour = h; this.minute = m; this.updateSummary(); this.switchTab('date'); }, () => this.switchTab('date'));
-    } }
-    onClose() { this.timePicker?.destroy(); this.timePicker = null; }
-    updateSummary() { if (!this.summary)
-        return; const d = new Date(this.date); d.setHours(this.hour, this.minute, 0, 0); this.summary.textContent = dateFa(this.p, d) + '  •  ' + clockFa(this.p, d); }
-    async save() { const title = this.titleInput.value.trim(); if (!title) {
-        new Notice('عنوان کار را وارد کنید');
-        return;
-    } const d = new Date(this.date); d.setHours(this.hour, this.minute, 0, 0); if (d.getHours() !== this.hour || d.getMinutes() !== this.minute) {
-        new Notice('ساعت معتبر نیست');
-        return;
-    } const tags = [...new Set(this.tagsInput.value.split(/[\s،,]+/).map(x => x.replace(/^#/, '')))].filter(Boolean); if (tags.some(x => !/^[\p{L}\p{N}_-]+$/u.test(x))) {
-        new Notice('هشتگ نامعتبر است');
-        return;
-    } const values = { title, tags, place: this.placeInput.value, at: iso(d) }; const ok = this.item ? await this.p.change(this.item, old => updateTaskPreservingText(this.p, old, values)) : await this.p.add(this.pathInput.value, values); if (ok) {
-        new Notice(this.item ? 'کار به‌روزرسانی شد' : 'کار اضافه شد');
-        this.close();
-    } }
+    onClose() {
+        this.stopWatching?.();
+        this.timePicker?.destroy();
+        this.timePicker = null;
+    }
+    updateSummary() {
+        if (!this.summary) return;
+        const day = new Date(this.date);
+        day.setHours(this.hour, this.minute, 0, 0);
+        this.summary.textContent = dateFa(this.p, day) + '  •  ' + clockFa(this.p, day);
+    }
+    setSaving(value) {
+        this.saving = value;
+        if (this.saveButton) this.saveButton.disabled = value;
+        if (this.deleteButton) this.deleteButton.disabled = value;
+    }
+    async save() {
+        if (this.saving) return;
+        const title = this.titleInput.value.trim();
+        if (!title) { new Notice('عنوان کار را وارد کنید'); this.titleInput.focus(); return; }
+        const day = new Date(this.date);
+        day.setHours(this.hour, this.minute, 0, 0);
+        if (day.getHours() !== this.hour || day.getMinutes() !== this.minute) {
+            new Notice('ساعت معتبر نیست'); return;
+        }
+        const tags = [...new Set(this.tagsInput.value.split(/[\s،,]+/).map(x => x.replace(/^#/, '')))].filter(Boolean);
+        if (tags.some(x => !/^[\p{L}\p{N}_-]+$/u.test(x))) {
+            new Notice('هشتگ نامعتبر است'); this.tagsInput.closest('details').open = true; this.tagsInput.focus(); return;
+        }
+        this.setSaving(true);
+        try {
+            const values = { title, tags, place: this.placeInput.value, at: iso(day) };
+            const ok = this.item
+                ? await this.p.change(this.item, old => updateTaskPreservingText(this.p, old, values))
+                : await this.p.add(this.pathInput.value, values, { daily: this.useDaily });
+            if (ok) { new Notice(this.item ? 'کار به‌روزرسانی شد' : 'کار اضافه شد'); this.close(); }
+        } catch (error) {
+            console.error('[Persian Reminder save]', error);
+            new Notice('ذخیره نشد: ' + error.message);
+        } finally { this.setSaving(false); }
+    }
 }
 module.exports = { TaskModal };
 
@@ -628,9 +953,9 @@ class Calendar {
         if (!a)
             return;
         const head = E(this.parent, 'div', 'pr-calendar-head');
-        B(head, '', 'chevron-right', 'pr-icon', () => this.move(-1));
+        B(head, '', 'chevron-right', 'pr-icon', () => this.move(-1)).setAttribute('aria-label', 'ماه قبل');
         E(head, 'strong', '', a.jalaliMonthName(this.m) + ' ' + fa(p, this.y));
-        B(head, '', 'chevron-left', 'pr-icon', () => this.move(1));
+        B(head, '', 'chevron-left', 'pr-icon', () => this.move(1)).setAttribute('aria-label', 'ماه بعد');
         B(head, 'امروز', null, 'pr-today', () => { this.selected = new Date(); const j = jalali(p, this.selected); this.y = j.jy; this.m = j.jm; this.onChange(new Date(this.selected)); this.draw(); });
         const grid = E(this.parent, 'div', 'pr-calendar-grid');
         ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].forEach(x => E(grid, 'span', 'pr-weekday', x));
@@ -664,7 +989,8 @@ class Calendar {
                 const indicator = E(cell, 'span', 'pr-calendar-count', total > 1 ? fa(p, total) : '');
                 indicator.setAttribute('aria-label', fa(p, total) + ' یادآوری');
             }
-            cell.setAttribute('aria-label', `${day} ${a.jalaliMonthName(this.m)}`);
+            cell.setAttribute('aria-label', `${fa(p, day)} ${a.jalaliMonthName(this.m)} ${fa(p, this.y)}`);
+            cell.setAttribute('aria-pressed', String(k === dateKey(this.selected)));
         }
     }
 }
@@ -917,26 +1243,396 @@ class MaterialClock {
 module.exports = { MaterialClock };
 
 },
+"src/ui/keyboard-viewport.js": function(module, exports, require) {
+const { Platform } = require('obsidian');
+
+// Fit to the visible WebView, including the on-screen keyboard. Only the form
+// scrolls; the title, selected date and save controls remain outside the scroller.
+function watchKeyboard(modal, scroller) {
+    const doc = modal.modalEl.ownerDocument;
+    const win = doc.defaultView;
+    const viewport = win.visualViewport;
+    const listeners = [], timers = new Set();
+    let frame = 0, closed = false;
+    const listen = (target, event, fn) => {
+        target?.addEventListener(event, fn);
+        listeners.push(() => target?.removeEventListener(event, fn));
+    };
+    const reveal = () => {
+        const input = doc.activeElement;
+        if (!scroller.contains(input) || !input.matches('input,textarea,select')) return;
+        const bounds = scroller.getBoundingClientRect();
+        const field = input.getBoundingClientRect();
+        const gap = 16;
+        if (field.bottom > bounds.bottom - gap)
+            scroller.scrollTop += field.bottom - bounds.bottom + gap;
+        else if (field.top < bounds.top + gap)
+            scroller.scrollTop -= bounds.top + gap - field.top;
+    };
+    const update = () => {
+        frame = 0;
+        if (closed) return;
+        const mobile = Platform.isMobile || win.matchMedia('(max-width: 600px)').matches;
+        const height = viewport?.height || win.innerHeight;
+        modal.modalEl.classList.toggle('pr-mobile-modal', mobile);
+        modal.modalEl.classList.toggle('pr-short-modal', mobile && height < 480);
+        if (mobile) {
+            modal.modalEl.style.setProperty('--pr-visible-height', `${height}px`);
+            modal.modalEl.style.setProperty('--pr-visible-top', `${viewport?.offsetTop || 0}px`);
+        }
+        reveal();
+    };
+    const schedule = () => {
+        if (!closed && !frame) frame = win.requestAnimationFrame(update);
+    };
+    const focus = () => {
+        schedule();
+        // Keyboard animations finish after focusin in iOS and Android WebViews.
+        for (const delay of [100, 300]) {
+            const timer = win.setTimeout(() => { timers.delete(timer); schedule(); }, delay);
+            timers.add(timer);
+        }
+    };
+    listen(viewport, 'resize', schedule);
+    listen(viewport, 'scroll', schedule);
+    listen(win, 'resize', schedule);
+    listen(scroller, 'focusin', focus);
+    listen(scroller, 'input', schedule);
+    listen(scroller, 'toggle', schedule);
+    update();
+    return () => {
+        closed = true;
+        listeners.forEach(off => off());
+        timers.forEach(timer => win.clearTimeout(timer));
+        if (frame) win.cancelAnimationFrame(frame);
+        modal.modalEl.style.removeProperty('--pr-visible-height');
+        modal.modalEl.style.removeProperty('--pr-visible-top');
+    };
+}
+module.exports = { watchKeyboard };
+
+},
+"src/ui/reminder-alert.js": function(module, exports, require) {
+const { Modal, Notice } = require('obsidian');
+const { E, I, B } = require("src/shared/dom.js");
+const { TASK } = require("src/core/constants.js");
+const { dateFa, clockFa, fromISO, iso, fa } = require("src/core/dates.js");
+const { reminderKey } = require("src/core/reminders.js");
+const { updateTaskPreservingText } = require("src/core/tasks.js");
+const { watchKeyboard } = require("src/ui/keyboard-viewport.js");
+
+// One compact card at a time, including when several reminders become due.
+class ReminderAlert extends Modal {
+    constructor(p, items, preview = false) {
+        super(p.app); this.p = p; this.items = [...items]; this.preview = preview;
+        this.minutes = Number(p.settings.snoozeMinutes) || 10; this.busy = false;
+    }
+    enqueue(items) {
+        const known = new Set(this.items.map(reminderKey));
+        for (const item of items) if (!known.has(reminderKey(item))) {
+            this.items.push(item); known.add(reminderKey(item));
+        }
+        if (this.body && !this.busy) this.renderItems();
+    }
+    onOpen() {
+        this.modalEl.addClass('pr-modal', 'pr-alert-modal');
+        this.modalEl.setAttribute('role', 'alertdialog');
+        this.modalEl.setAttribute('aria-label', 'هشدار یادآوری');
+        const root = this.contentEl;
+        root.replaceChildren();
+        const head = E(root, 'div', 'pr-modal-header');
+        I(head, 'bell-ring');
+        const title = E(head, 'div');
+        E(title, 'strong', '', this.preview ? 'پیش‌نمایش هشدار' : 'وقت این کار رسیده');
+        this.count = E(title, 'small'); this.count.setAttribute('aria-live', 'polite');
+        this.body = E(root, 'div', 'pr-modal-body pr-alert-body');
+        const footer = E(root, 'div', 'pr-modal-footer pr-alert-footer');
+        if (!this.preview) {
+            const label = E(footer, 'label', 'pr-alert-snooze-label');
+            E(label, 'span', '', 'یادآوری مجدد');
+            const select = E(label, 'select', 'pr-select');
+            select.setAttribute('aria-label', 'مدت تعویق یادآوری');
+            for (const minutes of [5, 10, 15, 30, 60]) {
+                E(select, 'option', '', fa(this.p, minutes) + ' دقیقه').value = String(minutes);
+            }
+            select.value = String(this.minutes);
+            select.addEventListener('change', () => { this.minutes = Number(select.value); });
+        }
+        B(footer, this.preview ? 'متوجه شدم' : 'بستن', null, 'pr-cancel-btn', () => this.close());
+        this.renderItems();
+        this.stopWatching = watchKeyboard(this, this.body);
+    }
+    renderItems() {
+        this.body.replaceChildren();
+        this.count.textContent = this.preview ? 'نمایش آزمایشی' : fa(this.p, this.items.length) + ' یادآوری';
+        const item = this.items[0];
+        if (!item) return;
+        const row = E(this.body, 'article', 'pr-alert-item');
+        E(row, 'h3', '', item.title || 'بدون عنوان');
+        const date = fromISO(item.at);
+        if (date) {
+            const time = E(row, 'div', 'pr-alert-meta');
+            I(time, 'calendar-clock'); E(time, 'span', '', dateFa(this.p, date) + ' · ' + clockFa(this.p, date));
+        }
+        if (item.place) {
+            const place = E(row, 'div', 'pr-alert-meta');
+            I(place, 'map-pin'); E(place, 'span', '', item.place);
+        }
+        if (!this.preview) {
+            const actions = E(row, 'div', 'pr-alert-actions');
+            B(actions, 'انجام شد', 'check', 'pr-save-btn', () => this.run(item, raw => raw.replace(TASK,
+                (_, prefix, checked, gap, text) => prefix + 'x' + gap + text)));
+            B(actions, 'بعداً', 'clock-3', 'pr-quiet-btn', () => this.snooze(item));
+            const link = B(row, item.path?.split('/').pop() || 'بازکردن یادداشت', 'file-text', 'pr-alert-note', async () => {
+                if (this.busy) return;
+                await this.p.openFile(item); this.close();
+            });
+            link.title = item.path;
+            link.setAttribute('aria-label', 'بازکردن یادداشت ' + (item.path || ''));
+            if (this.items.length > 1) B(row, 'یادآوری بعدی', 'chevron-left', 'pr-alert-next', () => {
+                if (this.busy) return;
+                this.items.shift(); this.renderItems();
+            });
+        }
+    }
+    async snooze(item) {
+        const date = new Date(Date.now() + this.minutes * 60000);
+        if (date.getSeconds() || date.getMilliseconds()) date.setMinutes(date.getMinutes() + 1);
+        date.setSeconds(0, 0);
+        await this.run(item, old => updateTaskPreservingText(this.p, old, { ...item, at: iso(date) }));
+    }
+    async run(item, transform) {
+        if (this.busy || this.preview) return;
+        this.busy = true;
+        this.body.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        try {
+            if (await this.p.change(item, transform)) this.items = this.items.filter(task => reminderKey(task) !== reminderKey(item));
+        } catch (error) {
+            console.error('[Persian Reminder alert]', error); new Notice('امکان به‌روزرسانی کار وجود نداشت');
+        } finally {
+            this.busy = false;
+            if (this.items.length) this.renderItems();
+            else this.close();
+        }
+    }
+    onClose() {
+        this.stopWatching?.();
+        if (this.p.alertModal === this) this.p.alertModal = null;
+    }
+}
+module.exports = { ReminderAlert };
+
+},
+"src/core/reminders.js": function(module, exports, require) {
+const { fromISO } = require("src/core/dates.js");
+
+// Metadata edits do not cause duplicate alarms; changing the due time rearms one.
+function reminderKey(item) { return JSON.stringify([item.path, item.at, item.title]); }
+function pendingReminders(p, now = Date.now()) {
+    return p.items().filter(item => {
+        const date = fromISO(item.at);
+        return !item.done && date && date.getTime() >= now - 86400000 && !p.settings.notified[reminderKey(item)];
+    });
+}
+
+// A timer for the next due time plus a watchdog for sleep, clock changes and
+// delayed calendar-plugin startup. All handles belong to this plugin instance.
+class ReminderScheduler {
+    constructor(p, host = window) {
+        this.p = p; this.host = host; this.running = false;
+        this.busy = false; this.rescan = false; this.lastApi = null;
+    }
+    async start() {
+        if (this.running) return;
+        this.running = true; this.startedAt = Date.now();
+        this.interval = this.host.setInterval(() => this.wake(), 30000);
+        await this.tick(true);
+    }
+    wake(rescan = false) {
+        if (!this.running) return;
+        this.rescan ||= rescan;
+        this.host.clearTimeout(this.timer);
+        if (!this.busy) this.timer = this.host.setTimeout(() => this.tick(), 100);
+    }
+    plan() {
+        if (!this.running) return;
+        this.host.clearTimeout(this.timer);
+        let delay = this.rescan ? 100 : 30000;
+        if (!this.p.api() && Date.now() - this.startedAt < 60000) delay = Math.min(delay, 1000);
+        const hidden = typeof document !== 'undefined' && document.hidden;
+        if (!hidden && this.p.settings.notificationMode !== 'off') {
+            const now = Date.now();
+            for (const item of pendingReminders(this.p, now)) {
+                const delta = fromISO(item.at).getTime() - now;
+                delay = Math.min(delay, delta <= 0 ? 1000 : Math.max(25, delta));
+            }
+        }
+        this.timer = this.host.setTimeout(() => this.tick(), delay);
+    }
+    async tick(rescan = false) {
+        if (!this.running || this.busy) return;
+        this.busy = true;
+        try {
+            const api = this.p.api();
+            if (rescan || this.rescan || api !== this.lastApi) {
+                this.rescan = false;
+                this.lastApi = api;
+                await this.p.scanAll();
+            }
+            if (this.running) await this.p.notify();
+            if (this.running) this.p.refresh();
+        } catch (error) { console.error('[Persian Reminder scheduler]', error); }
+        finally { this.busy = false; this.plan(); }
+    }
+    stop() {
+        this.running = false;
+        this.host.clearTimeout(this.timer);
+        this.host.clearInterval(this.interval);
+    }
+}
+module.exports = { reminderKey, pendingReminders, ReminderScheduler };
+
+},
+"src/core/appearance.js": function(module, exports, require) {
+const { DEFAULTS } = require("src/core/constants.js");
+const { fromISO, fa } = require("src/core/dates.js");
+const { cssColor } = require("src/core/tasks.js");
+
+function gradientAngle(settings) {
+    const value = Number(settings.gradientAngle ?? 120);
+    return Number.isFinite(value) ? Math.max(0, Math.min(360, value)) : 120;
+}
+function cardTint(settings) {
+    const value = Number(settings.cardTint ?? 10);
+    return Number.isFinite(value) ? Math.max(0, Math.min(50, value)) : 10;
+}
+function contrastText(a, b) {
+    const luminance = hex => {
+        const rgb = cssColor(hex).slice(1).match(/../g).map(part => parseInt(part, 16) / 255)
+            .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+        return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+    };
+    const ends = [luminance(a), luminance(b)];
+    const score = color => Math.min(...ends.map(value => {
+        const ink = luminance(color);
+        return (Math.max(value, ink) + .05) / (Math.min(value, ink) + .05);
+    }));
+    return score('#ffffff') > score('#182e3a') ? '#ffffff' : '#182e3a';
+}
+function remainingInfo(p, item, now = new Date()) {
+    const date = fromISO(item.at);
+    if (!date) return null;
+    const day = value => Date.UTC(value.getFullYear(), value.getMonth(), value.getDate());
+    const days = Math.round((day(date) - day(now)) / 86400000);
+    let kind, label;
+    if (item.done) { kind = 'done'; label = 'انجام‌شده'; }
+    else if (date < now) { kind = 'overdue'; label = 'زمان گذشته'; }
+    else if (days === 0) { kind = 'today'; label = 'امروز'; }
+    else if (days === 1) { kind = 'tomorrow'; label = 'فردا'; }
+    else { kind = 'future'; label = fa(p, days) + ' روز دیگر'; }
+    let colors = { ...DEFAULTS.badgeColors.remaining, ...(p.settings.badgeColors?.remaining || {}) };
+    if (p.settings.remainingRulesEnabled !== false) {
+        if (['done', 'overdue', 'today'].includes(kind)) {
+            colors = { ...DEFAULTS.remainingColors[kind], ...(p.settings.remainingColors?.[kind] || {}) };
+        } else {
+            const rule = [...(p.settings.remainingRules || DEFAULTS.remainingRules)]
+                .filter(rule => rule.enabled !== false && Number.isFinite(Number(rule.days)) && Number(rule.days) >= days)
+                .sort((a, b) => Number(a.days) - Number(b.days))[0];
+            if (rule) colors = rule;
+        }
+    }
+    return { label, kind, days, colors };
+}
+function paintRemaining(p, element, item, now) {
+    const info = remainingInfo(p, item, now);
+    if (!info) return;
+    element.textContent = info.label;
+    element.className = element.className.replace(/\bis-(?:done|overdue|today|tomorrow|future)\b/g, '').trim();
+    element.classList.add('is-' + info.kind);
+    for (const key of ['a', 'b', 'border']) element.style.setProperty('--pr-pill-' + key, cssColor(info.colors[key]));
+    element.style.setProperty('--pr-pill-text', contrastText(info.colors.a, info.colors.b));
+    return info;
+}
+module.exports = { gradientAngle, cardTint, contrastText, remainingInfo, paintRemaining };
+
+},
 "src/views/sidebar.js": function(module, exports, require) {
-// Sidebar filters, search, and completed-task section.
 const { ItemView } = require('obsidian');
 const { SIDE } = require("src/core/constants.js");
 const { E, B } = require("src/shared/dom.js");
 const { fa, dateKey } = require("src/core/dates.js");
 const { status } = require("src/core/tasks.js");
 const { empty, taskCard } = require("src/ui/task-card.js");
+const { panelHeader, stats, dayPicker, searchField, matchesQuery } = require("src/ui/view-parts.js");
+
 class Sidebar extends ItemView {
-    constructor(leaf, p) { super(leaf); this.p = p; this.filter = 'all'; this.query = ''; }
+    constructor(leaf, p) {
+        super(leaf);
+        this.p = p;
+        this.day = new Date();
+        this.filter = 'all';
+        this.query = '';
+    }
     getViewType() { return SIDE; }
     getDisplayText() { return 'یادآوری‌ها'; }
     getIcon() { return 'alarm-clock'; }
     async onOpen() { this.render(); }
-    render() { const root = this.contentEl; root.replaceChildren(); root.classList.add('pr-root', 'pr-sidebar', 'pr-panel-' + this.p.settings.panelStyle); const head = E(root, 'div', 'pr-sidebar-head'); E(head, 'h3', '', 'یادآوری‌ها'); B(head, 'افزودن', 'plus', 'pr-add', () => this.p.create()); B(head, '', 'layout-dashboard', 'pr-icon', () => this.p.dashboard()); const query = E(root, 'input', 'pr-search'); query.type = 'search'; query.placeholder = 'جست‌وجوی کار و مکان...'; query.value = this.query; query.addEventListener('input', () => { this.query = query.value; this.list(); }); const tabs = E(root, 'div', 'pr-sidebar-tabs'); [['all', 'فعال'], ['today', 'امروز'], ['soon', 'نزدیک'], ['overdue', 'گذشته'], ['done', 'انجام‌شده']].forEach(([key, label]) => B(tabs, label, null, 'pr-sidebar-tab' + (key === this.filter ? ' is-active' : ''), () => { this.filter = key; this.render(); })); this.counter = E(root, 'div', 'pr-counter'); this.container = E(root, 'div', 'pr-sidebar-list'); this.list(); }
-    list() { if (!this.container)
-        return; this.container.replaceChildren(); const now = dateKey(new Date()), q = this.query.trim().toLowerCase(); const filtered = this.p.items().filter(item => { const stateName = status(this.p, item); const matches = this.filter === 'done' ? item.done : !item.done && (this.filter === 'all' || this.filter === 'today' && item.at.slice(0, 10) === now || this.filter === stateName); return matches && (!q || [item.title, item.place, item.path, ...item.tags].join(' ').toLowerCase().includes(q)); }); this.counter.textContent = fa(this.p, filtered.length) + ' کار'; if (!filtered.length)
-        empty(this.container, 'کاری در این قسمت نیست');
-    else
-        filtered.forEach(item => taskCard(this.p, this.container, item, true)); }
+    render() {
+        const root = this.contentEl, p = this.p;
+        root.replaceChildren();
+        root.classList.add('pr-root', 'pr-sidebar');
+        panelHeader(root, 'یادآوری‌ها', 'برای روزتان جا باز کنید', () => p.create(this.day),
+            { icon: 'layout-dashboard', label: 'بازکردن داشبورد', action: () => p.dashboard() });
+        this.stats = stats(root, p, true);
+        this.picker = dayPicker(root, p, this.day, day => {
+            this.day = day;
+            this.filter = 'day';
+            this.updateTabs();
+            this.list();
+        }, true);
+        searchField(root, this.query, query => { this.query = query; this.list(); });
+        this.tabs = E(root, 'div', 'pr-sidebar-tabs');
+        this.tabs.setAttribute('role', 'group');
+        this.tabs.setAttribute('aria-label', 'فیلتر کارها');
+        this.buttons = new Map();
+        for (const [key, label] of [['day', 'این روز'], ['all', 'همهٔ فعال'], ['soon', 'نزدیک'], ['overdue', 'گذشته'], ['done', 'انجام‌شده']]) {
+            this.buttons.set(key, B(this.tabs, label, null, 'pr-sidebar-tab', () => {
+                this.filter = key; this.updateTabs(); this.list();
+            }));
+        }
+        this.updateTabs();
+        this.counter = E(root, 'div', 'pr-counter');
+        this.container = E(root, 'div', 'pr-sidebar-list');
+        this.list();
+    }
+    updateTabs() {
+        for (const [key, button] of this.buttons || []) {
+            button.classList.toggle('is-active', key === this.filter);
+            button.setAttribute('aria-pressed', String(key === this.filter));
+        }
+    }
+    refresh() {
+        if (!this.container) return;
+        this.stats?.update();
+        this.picker?.refresh();
+        this.list();
+    }
+    list() {
+        if (!this.container) return;
+        const scroll = this.container.scrollTop;
+        this.container.replaceChildren();
+        const filtered = this.p.items().filter(item => {
+            const matches = this.filter === 'done' ? item.done : !item.done && (
+                this.filter === 'all' ||
+                this.filter === 'day' && item.at?.slice(0, 10) === dateKey(this.day) ||
+                this.filter === status(this.p, item));
+            return matches && matchesQuery(item, this.query);
+        });
+        this.counter.textContent = fa(this.p, filtered.length) + ' کار' + (this.filter === 'day' ? ' برای روز انتخاب‌شده' : ' در این فهرست');
+        if (!filtered.length) empty(this.container, this.query ? 'کاری با این عبارت پیدا نشد' : 'هنوز کاری اینجا ندارید');
+        else filtered.forEach(item => taskCard(this.p, this.container, item, true));
+        this.container.scrollTop = scroll;
+    }
 }
 module.exports = { Sidebar };
 
@@ -947,55 +1643,28 @@ const { E, I, B } = require("src/shared/dom.js");
 const { TASK } = require("src/core/constants.js");
 const { fromISO, fa, dateFa, clockFa } = require("src/core/dates.js");
 const { status, paintTask } = require("src/core/tasks.js");
+const { paintRemaining } = require("src/core/appearance.js");
 function empty(parent, message) { const box = E(parent, 'div', 'pr-empty'); I(box, 'calendar-check'); E(box, 'span', '', message); }
 function taskCard(p, parent, item, compact = false) {
-    const st = status(p, item), box = E(parent, 'article', 'pr-task-card pr-due-' + st + (compact ? ' is-compact' : ''));
+    const st = status(p, item), box = E(parent, 'article', 'pr-task-card pr-card-surface pr-due-' + st + (compact ? ' is-compact' : ''));
     paintTask(p, box, item);
     const body = E(box, 'div', 'pr-card-main'), title = E(body, 'div', 'pr-card-heading');
     const check = E(title, 'input', 'pr-check');
     check.type = 'checkbox';
     check.checked = item.done;
-    check.setAttribute('aria-label', 'انجام کار');
+    check.setAttribute('aria-label', 'انجام کار: ' + (item.title || 'بدون عنوان'));
     check.addEventListener('change', async () => { const ok = await p.change(item, raw => raw.replace(TASK, (_, a, c, b, rest) => a + (check.checked ? 'x' : ' ') + b + rest)); if (!ok)
         check.checked = !check.checked; });
-    const name = E(title, 'span', 'pr-title', item.title || 'بدون عنوان');
+    const name = E(title, 'button', 'pr-title', item.title || 'بدون عنوان');
+    name.type = 'button';
+    name.setAttribute('aria-label', 'بازکردن یادداشت: ' + (item.title || 'بدون عنوان'));
     name.addEventListener('click', () => p.openFile(item));
     const date = fromISO(item.at), meta = E(body, 'div', 'pr-card-meta');
     if (date) {
         const chip = B(meta, dateFa(p, date) + ' · ' + clockFa(p, date), 'calendar-clock', 'pr-card-date', () => p.edit(item, 'time'));
         chip.title = 'تغییر تاریخ و ساعت';
     }
-    const when = fromISO(item.at);
-    if (when) {
-        const remaining = E(meta, 'span', 'pr-remaining');
-        let label, kind = '';
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const target = new Date(when);
-        target.setHours(0, 0, 0, 0);
-        const days = Math.round((Date.UTC(target.getFullYear(), target.getMonth(), target.getDate()) - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
-        if (item.done) {
-            label = 'انجام‌شده';
-            kind = 'is-done';
-        }
-        else if (when.getTime() < Date.now()) {
-            label = 'زمان گذشته';
-            kind = 'is-overdue';
-        }
-        else if (days === 0) {
-            label = 'امروز';
-            kind = 'is-today';
-        }
-        else if (days === 1) {
-            label = 'فردا';
-            kind = 'is-tomorrow';
-        }
-        else {
-            label = fa(p, days) + ' روز دیگر';
-        }
-      if (kind) remaining.classList.add(kind);
-remaining.textContent = label;
-    }
+    if (date) paintRemaining(p, E(meta, 'span', 'pr-remaining'), item);
     if (item.place) {
         const m = E(meta, 'span', 'pr-location');
         I(m, 'map-pin');
@@ -1009,24 +1678,149 @@ remaining.textContent = label;
     const controls = E(box, 'div', 'pr-card-actions');
     const timeBtn = B(controls, '', 'clock-3', 'pr-card-action', () => p.edit(item, 'time'));
     timeBtn.title = 'اصلاح زمان';
+    timeBtn.setAttribute('aria-label', 'اصلاح زمان');
     const editBtn = B(controls, '', 'pencil', 'pr-card-action', () => p.edit(item));
     editBtn.title = 'ویرایش کار';
+    editBtn.setAttribute('aria-label', 'ویرایش کار');
     return box;
 }
 module.exports = { empty, taskCard };
 
 },
-"src/views/dashboard.js": function(module, exports, require) {
-// Dashboard: daily tasks on the right, calendar on the left, saved filters.
-const { ItemView } = require('obsidian');
-const { DASH } = require("src/core/constants.js");
+"src/ui/view-parts.js": function(module, exports, require) {
+// Shared surfaces keep the sidebar and dashboard visually and behaviorally aligned.
 const { E, I, B } = require("src/shared/dom.js");
-const { fa, dateKey, dateFa } = require("src/core/dates.js");
+const { fa, dateFa, dateKey } = require("src/core/dates.js");
 const { status } = require("src/core/tasks.js");
-const { empty, taskCard } = require("src/ui/task-card.js");
 const { Calendar } = require("src/ui/calendar.js");
+
+function panelHeader(parent, title, subtitle, action, secondary) {
+    const head = E(parent, 'header', 'pr-view-header');
+    const brand = E(head, 'div', 'pr-view-brand');
+    I(brand, 'calendar-clock', 'pr-brand-icon');
+    const text = E(brand, 'div', 'pr-view-heading');
+    E(text, 'h2', '', title);
+    E(text, 'p', '', subtitle);
+    const controls = E(head, 'div', 'pr-view-controls');
+    B(controls, 'کار جدید', 'plus', 'pr-add', action);
+    if (secondary) {
+        const button = B(controls, '', secondary.icon, 'pr-icon', secondary.action);
+        button.title = secondary.label;
+        button.setAttribute('aria-label', secondary.label);
+    }
+}
+
+function stats(parent, p, compact = false) {
+    const root = E(parent, 'div', 'pr-stats' + (compact ? ' is-compact' : ''));
+    const update = () => {
+        root.replaceChildren();
+        const tasks = p.items(), today = dateKey(new Date());
+        const rows = [
+            ['فعال', tasks.filter(x => !x.done).length, 'list-todo', 'active'],
+            ['امروز', tasks.filter(x => !x.done && x.at?.slice(0, 10) === today).length, 'sun', 'today'],
+            ['گذشته', tasks.filter(x => status(p, x) === 'overdue').length, 'timer', 'overdue'],
+            ['انجام‌شده', tasks.filter(x => x.done).length, 'check-check', 'done']
+        ];
+        for (const [label, count, icon, key] of rows) {
+            const card = E(root, 'div', 'pr-stat pr-stat-' + key);
+            I(card, icon);
+            E(card, 'strong', '', fa(p, count));
+            E(card, 'span', '', label);
+        }
+    };
+    update();
+    return { update };
+}
+
+function dayPicker(parent, p, day, onChange, compact = false) {
+    const root = E(parent, 'section', 'pr-day-picker' + (compact ? ' is-compact' : ''));
+    const bar = E(root, 'div', 'pr-day-navigation');
+    const previous = B(bar, '', 'chevron-right', 'pr-icon', () => shift(-1));
+    previous.setAttribute('aria-label', 'روز قبل');
+    const label = E(bar, 'div', 'pr-day-label');
+    E(label, 'small', '', 'روز انتخاب‌شده');
+    const title = E(label, 'strong');
+    title.setAttribute('aria-live', 'polite');
+    const next = B(bar, '', 'chevron-left', 'pr-icon', () => shift(1));
+    next.setAttribute('aria-label', 'روز بعد');
+    B(bar, 'امروز', null, 'pr-quiet-btn', () => select(new Date()));
+    let calendar = null;
+    const calendarBox = E(root, 'details', 'pr-view-calendar-toggle');
+    calendarBox.open = !compact;
+    E(calendarBox, 'summary', '', 'انتخاب از تقویم');
+    const host = E(calendarBox, 'div', 'pr-calendar-host');
+    const destination = E(root, 'div', 'pr-day-destination');
+    I(destination, 'file-text');
+    const path = E(destination, 'span');
+    function select(value) {
+        day = new Date(value);
+        update();
+        onChange(new Date(day));
+    }
+    function shift(delta) {
+        const value = new Date(day);
+        value.setDate(value.getDate() + delta);
+        select(value);
+    }
+    function update() {
+        title.textContent = dateFa(p, day);
+        try { path.textContent = p.dailyDestination(day); }
+        catch (error) { path.textContent = error.message; }
+        path.title = path.textContent;
+        if (p.api()) {
+            const { jalali } = require("src/core/dates.js");
+            const j = jalali(p, day);
+            if (j && calendar) {
+                calendar.selected = new Date(day);
+                calendar.y = j.jy;
+                calendar.m = j.jm;
+                calendar.draw();
+            } else if (j) calendar = new Calendar(p, host, day, select, true);
+        } else {
+            host.textContent = 'برای نمایش تقویم، Persian Calendar را فعال کنید.';
+        }
+    }
+    update();
+    return {
+        update,
+        refresh() {
+            title.textContent = dateFa(p, day);
+            try { path.textContent = p.dailyDestination(day); }
+            catch (error) { path.textContent = error.message; }
+            if (calendar) calendar.draw();
+            else update();
+        }
+    };
+}
+
+function searchField(parent, value, onInput) {
+    const wrap = E(parent, 'label', 'pr-search-field');
+    I(wrap, 'search');
+    const input = E(wrap, 'input', 'pr-search');
+    input.type = 'search';
+    input.placeholder = 'جست‌وجوی کار، هشتگ یا مکان…';
+    input.setAttribute('aria-label', 'جست‌وجوی یادآوری‌ها');
+    input.value = value;
+    input.addEventListener('input', () => onInput(input.value));
+    return input;
+}
+function matchesQuery(item, query) {
+    const text = query.trim().toLocaleLowerCase();
+    return !text || [item.title, item.place, item.path, ...item.tags].join(' ').toLocaleLowerCase().includes(text);
+}
+module.exports = { panelHeader, stats, dayPicker, searchField, matchesQuery };
+
+},
+"src/views/dashboard.js": function(module, exports, require) {
+const { ItemView, Notice } = require('obsidian');
+const { DASH } = require("src/core/constants.js");
+const { E, B } = require("src/shared/dom.js");
+const { fa, dateKey, dateFa } = require("src/core/dates.js");
+const { empty, taskCard } = require("src/ui/task-card.js");
+const { panelHeader, stats, dayPicker, searchField, matchesQuery } = require("src/ui/view-parts.js");
+
 class Dashboard extends ItemView {
-    constructor(leaf, p) { super(leaf); this.p = p; this.day = new Date(); this.activePinned = null; }
+    constructor(leaf, p) { super(leaf); this.p = p; this.day = new Date(); this.activePinned = null; this.query = ''; }
     getViewType() { return DASH; }
     getDisplayText() { return 'داشبورد یادآوری'; }
     getIcon() { return 'layout-dashboard'; }
@@ -1034,203 +1828,498 @@ class Dashboard extends ItemView {
     render() {
         const p = this.p, root = this.contentEl;
         root.replaceChildren();
-        root.classList.add('pr-root', 'pr-dashboard', 'pr-panel-' + p.settings.panelStyle);
-        const head = E(root, 'div', 'pr-dashboard-head');
-        const heading = E(head, 'div');
-        E(heading, 'h2', '', 'داشبورد یادآوری');
-        E(heading, 'p', '', 'تقویم، کارهای روزانه و فیلترهای منتخب');
-        B(head, 'افزودن کار', 'plus', 'pr-add', () => p.create(this.day));
-        const items = p.items();
-        const counts = [['فعال', items.filter(x => !x.done).length, 'list-todo'], ['امروز', items.filter(x => !x.done && x.at.slice(0, 10) === dateKey(new Date())).length, 'sun'], ['نزدیک', items.filter(x => status(p, x) === 'soon').length, 'timer'], ['انجام‌شده', items.filter(x => x.done).length, 'check-circle']];
-        const stats = E(root, 'div', 'pr-stats');
-        counts.forEach(([name, n, glyph]) => { const stat = E(stats, 'div', 'pr-stat'); I(stat, glyph); E(stat, 'strong', '', fa(p, n)); E(stat, 'span', '', name); });
-        const cols = E(root, 'div', 'pr-dashboard-columns');
-        this.dayColumn = E(cols, 'section', 'pr-dashboard-day');
-        const calSection = E(cols, 'section', 'pr-dashboard-calendar');
-        E(calSection, 'h3', '', 'تقویم یادآوری‌ها');
-        const cal = E(calSection, 'div', 'pr-calendar-host');
-        new Calendar(p, cal, this.day, d => { this.day = d; this.renderDay(); }, true);
+        root.classList.add('pr-root', 'pr-dashboard');
+        panelHeader(root, 'داشبورد یادآوری', 'یک نگاه روشن به روز و کارها', () => p.create(this.day),
+            { icon: 'panel-right', label: 'بازکردن سایدبار', action: () => p.sidebar() });
+        this.stats = stats(root, p);
+        const columns = E(root, 'div', 'pr-dashboard-columns');
+        this.dayColumn = E(columns, 'section', 'pr-dashboard-day');
+        const calendar = E(columns, 'section', 'pr-dashboard-calendar');
+        E(calendar, 'h3', '', 'تقویم و یادداشت روز');
+        this.picker = dayPicker(calendar, p, this.day, day => { this.day = day; this.renderDay(); });
         this.renderDay();
         this.pinnedWrap = E(root, 'section', 'pr-pinned-section');
         this.renderPinned();
     }
-    renderDay() { if (!this.dayColumn)
-        return; const p = this.p; this.dayColumn.replaceChildren(); const head = E(this.dayColumn, 'div', 'pr-section-head'); E(head, 'h3', '', 'کارهای ' + dateFa(p, this.day)); B(head, 'افزودن', 'plus', 'pr-quiet-btn', () => p.create(this.day)); const wrap = E(this.dayColumn, 'div', 'pr-day-list'); const filtered = p.items().filter(x => !x.done && x.at.slice(0, 10) === dateKey(this.day)); if (!filtered.length)
-        empty(wrap, 'برای این روز کاری ثبت نشده');
-    else
-        filtered.forEach(x => taskCard(p, wrap, x)); }
+    refresh() {
+        if (!this.dayColumn) return;
+        this.stats?.update();
+        this.picker?.refresh();
+        this.renderDay();
+        this.renderPinnedResults();
+    }
+    renderDay() {
+        if (!this.dayColumn) return;
+        const scroll = this.dayColumn.querySelector('.pr-day-list')?.scrollTop || 0;
+        this.dayColumn.replaceChildren();
+        const head = E(this.dayColumn, 'div', 'pr-section-head');
+        const text = E(head, 'div');
+        E(text, 'small', 'pr-eyebrow', 'برنامهٔ روز');
+        E(text, 'h3', '', dateFa(this.p, this.day));
+        B(head, 'افزودن', 'plus', 'pr-quiet-btn', () => this.p.create(this.day));
+        const filtered = this.p.items().filter(x => !x.done && x.at?.slice(0, 10) === dateKey(this.day));
+        E(this.dayColumn, 'p', 'pr-day-caption', fa(this.p, filtered.length) + ' کار فعال برای این روز');
+        const list = E(this.dayColumn, 'div', 'pr-day-list');
+        if (!filtered.length) {
+            empty(list, 'روزتان هنوز خالی است');
+            B(list, 'اولین کار این روز', 'plus', 'pr-quiet-btn pr-empty-add', () => this.p.create(this.day));
+        } else filtered.forEach(item => taskCard(this.p, list, item));
+        list.scrollTop = scroll;
+    }
     renderPinned() {
         const p = this.p, root = this.pinnedWrap;
-        if (!root)
-            return;
         root.replaceChildren();
         const heading = E(root, 'div', 'pr-section-head');
-        E(heading, 'h3', '', 'فیلترهای منتخب');
-        E(heading, 'span', 'pr-muted', 'بر اساس هشتگ یا مکان');
+        E(heading, 'h3', '', 'همهٔ کارها و فیلترهای منتخب');
+        E(heading, 'span', 'pr-muted', 'هشتگ و مکان');
+        searchField(root, this.query, query => { this.query = query; this.renderPinnedResults(); });
         const form = E(root, 'div', 'pr-filter-form');
         const type = E(form, 'select', 'pr-select');
-        [['tag', 'هشتگ'], ['place', 'مکان']].forEach(([value, label]) => { const opt = E(type, 'option', '', label); opt.value = value; });
+        type.setAttribute('aria-label', 'نوع فیلتر منتخب');
+        for (const [value, label] of [['tag', 'هشتگ'], ['place', 'مکان']]) E(type, 'option', '', label).value = value;
         const input = E(form, 'input', 'pr-input');
-        input.placeholder = 'مثلاً مهم یا مدرسه';
-        B(form, 'افزودن', 'plus', 'pr-add', async () => { const value = (type.value === 'tag' ? input.value.trim().replace(/^#/, '') : input.value.trim()); if (!value)
-            return; const filter = { type: type.value, value }; if (!p.settings.pinned.some(f => f.type === filter.type && f.value === filter.value)) {
-            p.settings.pinned.push(filter);
-            await p.persist();
-        } input.value = ''; this.activePinned = filter; this.renderPinned(); });
-        const chips = E(root, 'div', 'pr-filter-chips');
-        B(chips, 'همه کارهای فعال', null, 'pr-filter-chip' + (!this.activePinned ? ' is-active' : ''), () => { this.activePinned = null; this.renderPinned(); });
-        p.settings.pinned.forEach(f => { const chip = E(chips, 'span', 'pr-saved-filter'); B(chip, (f.type === 'tag' ? '#' : '📍 ') + f.value, null, 'pr-filter-chip' + (this.activePinned?.type === f.type && this.activePinned?.value === f.value ? ' is-active' : ''), () => { this.activePinned = f; this.renderPinned(); }); const remove = B(chip, '', 'x', 'pr-remove-filter', async () => { p.settings.pinned = p.settings.pinned.filter(x => !(x.type === f.type && x.value === f.value)); if (this.activePinned?.type === f.type && this.activePinned?.value === f.value)
-            this.activePinned = null; await p.persist(); this.renderPinned(); }); remove.title = 'حذف فیلتر'; });
-        const list = E(root, 'div', 'pr-pinned-list');
-        let items = p.items().filter(x => !x.done);
-        if (this.activePinned) {
-            const f = this.activePinned;
-            items = items.filter(x => f.type === 'tag' ? x.tags.includes(f.value) : x.place.toLowerCase().includes(f.value.toLowerCase()));
+        input.placeholder = 'یک فیلتر برای دفعات بعد ذخیره کنید…';
+        input.setAttribute('aria-label', 'هشتگ یا مکان فیلتر');
+        const add = async () => {
+            const value = type.value === 'tag' ? input.value.trim().replace(/^#/, '') : input.value.trim();
+            if (!value) return;
+            if (type.value === 'tag' && !/^[\p{L}\p{N}_-]+$/u.test(value)) {
+                new Notice('یک هشتگ معتبر وارد کنید'); return;
+            }
+            const filter = { type: type.value, value };
+            if (!p.settings.pinned.some(f => f.type === filter.type && f.value === filter.value)) {
+                p.settings.pinned.push(filter); await p.persist();
+            }
+            input.value = '';
+            this.activePinned = filter;
+            this.renderPinnedResults();
+        };
+        B(form, 'ذخیرهٔ فیلتر', 'plus', 'pr-quiet-btn', add);
+        input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.isComposing) add(); });
+        this.chips = E(root, 'div', 'pr-filter-chips');
+        this.pinnedCount = E(root, 'div', 'pr-counter');
+        this.pinnedList = E(root, 'div', 'pr-pinned-list');
+        this.renderPinnedResults();
+    }
+    renderPinnedResults() {
+        if (!this.pinnedList) return;
+        const p = this.p;
+        this.chips.replaceChildren();
+        const all = B(this.chips, 'همهٔ فعال', null, 'pr-filter-chip' + (!this.activePinned ? ' is-active' : ''), () => {
+            this.activePinned = null; this.renderPinnedResults();
+        });
+        all.setAttribute('aria-pressed', String(!this.activePinned));
+        for (const filter of p.settings.pinned) {
+            const active = this.activePinned?.type === filter.type && this.activePinned?.value === filter.value;
+            const chip = E(this.chips, 'span', 'pr-saved-filter');
+            const button = B(chip, (filter.type === 'tag' ? '#' : '📍 ') + filter.value, null,
+                'pr-filter-chip' + (active ? ' is-active' : ''), () => { this.activePinned = filter; this.renderPinnedResults(); });
+            button.setAttribute('aria-pressed', String(active));
+            const remove = B(chip, '', 'x', 'pr-remove-filter', async () => {
+                p.settings.pinned = p.settings.pinned.filter(x => !(x.type === filter.type && x.value === filter.value));
+                if (active) this.activePinned = null;
+                await p.persist(); this.renderPinnedResults();
+            });
+            remove.setAttribute('aria-label', 'حذف فیلتر ' + filter.value);
         }
-        if (!items.length)
-            empty(list, 'کاری مطابق این فیلتر وجود ندارد');
-        else
-            items.slice(0, 40).forEach(item => taskCard(p, list, item));
+        let tasks = p.items().filter(x => !x.done && matchesQuery(x, this.query));
+        if (this.activePinned) {
+            const filter = this.activePinned;
+            tasks = tasks.filter(x => filter.type === 'tag' ? x.tags.includes(filter.value) : x.place.toLowerCase().includes(filter.value.toLowerCase()));
+        }
+        this.pinnedCount.textContent = fa(p, tasks.length) + ' کار';
+        this.pinnedList.replaceChildren();
+        if (!tasks.length) empty(this.pinnedList, 'کاری مطابق این فیلتر پیدا نشد');
+        else tasks.forEach(item => taskCard(p, this.pinnedList, item));
     }
 }
 module.exports = { Dashboard };
 
 },
 "src/settings.js": function(module, exports, require) {
-// Settings: palette swatches, tag-to-task coloring, daily-note folder, notification window.
 const { PluginSettingTab, Setting, Notice } = require('obsidian');
 const { PALETTES, DEFAULTS } = require("src/core/constants.js");
-const { fa } = require("src/core/dates.js");
+const { fa, iso, en } = require("src/core/dates.js");
+const { dailyOptions, dailyNotePath } = require("src/core/daily-notes.js");
+const { E, I, B } = require("src/shared/dom.js");
+const { gradientAngle, cardTint, contrastText, paintRemaining } = require("src/core/appearance.js");
 
 class SettingsTab extends PluginSettingTab {
-    constructor(app, p) { super(app, p); this.p = p; }
-
+    constructor(app, p) { super(app, p); this.p = p; this.page = 'general'; }
     display() {
-        const p = this.p, root = this.containerEl;
-        root.empty();
-        root.addClass('pr-settings');
-        root.createEl('h2', { text: 'تنظیمات یادآوری فارسی' });
-
-        const section = (title, hint, open = false) => {
-            const box = root.createEl('details', { cls: 'pr-settings-section' });
-            if (open) box.open = true;
-            const summary = box.createEl('summary', { cls: 'pr-settings-summary' });
-            summary.createEl('span', { text: title });
-            if (hint) summary.createEl('small', { text: hint });
-            return box.createEl('div', { cls: 'pr-settings-section-body' });
-        };
-        const behavior = section('رفتار یادآوری', 'کلیک، تاریخ و کارهای نزدیک');
-        // --- رفتار ---
-        new Setting(behavior).setName('بازکردن ساعت').setDesc('برچسب تاریخ همیشه با یک کلیک باز می‌شود').addDropdown(d => d.addOption('single', 'یک کلیک').addOption('double', 'دوبار کلیک').setValue(p.settings.clickMode).onChange(async (v) => { p.settings.clickMode = v; await p.persist(); }));
-
-        new Setting(behavior).setName('ذخیره تاریخ').addDropdown(d => d.addOption('jalali', 'شمسی (@j:...)').addOption('gregorian', 'میلادی (@...)').setValue(p.settings.dateFormat).onChange(async (v) => { p.settings.dateFormat = v; await p.persist(); }));
-
-        const slider = new Setting(behavior).setName('محدودهٔ کارهای نزدیک').setDesc('زمان باقی‌مانده تا یادآوری، بر حسب ساعت');
-        const desc = slider.descEl.createSpan({ text: ' — ' + fa(p, p.settings.soonHours) + ' ساعت' });
-        slider.addSlider(s => { s.setLimits(1, 168, 1).setValue(p.settings.soonHours).onChange(async (v) => { p.settings.soonHours = v; desc.textContent = ' — ' + fa(p, v) + ' ساعت'; await p.persist(); p.refresh(); }); if (s.sliderEl) {
-            s.sliderEl.dir = 'ltr';
-            s.sliderEl.style.direction = 'ltr';
-        } });
-
-        // --- مقصد یادداشت روز ---
-        const daily = section('یادداشت‌های روزانه', 'مسیر ذخیره و عنوان بخش');
-        daily.createEl('p', { text: 'تسک‌های دارای تاریخ به‌طور خودکار در یادداشت همان روز (میلادی) ذخیره می‌شوند. تسک‌های بدون تاریخ به یادداشت پیش‌فرض می‌روند.', cls: 'pr-setting-help' });
-
-        new Setting(daily).setName('پوشهٔ یادداشت‌های روز').setDesc('خالی = ریشهٔ ولت. مثال: Daily').addText(t => t.setPlaceholder('Daily').setValue(p.settings.dailyFolder).onChange(async (v) => { p.settings.dailyFolder = v.trim().replace(/^\/+|\/+$/g, ''); await p.persist(); }));
-
-        new Setting(daily).setName('عنوان بخش').setDesc('تسک‌ها زیر این عنوان اضافه می‌شوند').addText(t => t.setPlaceholder('## یادآوری‌ها').setValue(p.settings.dailyHeading).onChange(async (v) => { p.settings.dailyHeading = v.trim() || '## یادآوری‌ها'; await p.persist(); }));
-
-        new Setting(daily).setName('یادداشت پیش‌فرض (بدون تاریخ)').addText(t => t.setValue(p.settings.defaultNote).onChange(async (v) => { p.settings.defaultNote = v.trim() || 'یادآوری‌ها.md'; await p.persist(); }));
-
-        // Appearance: one compact accent selector and three independently configurable badges.
-        const appearance = section('رنگ اصلی افزونه', 'رنگ ملایم کارت‌ها و کنترل‌ها');
-        appearance.createEl('p', { text: 'رنگ انتخابی با شدت ملایم روی همه کارت‌ها اعمال می‌شود؛ رنگ اختصاصی کارت‌های هشتگ‌دار اولویت دارد.', cls: 'pr-setting-help' });
-        const swatchWrap = appearance.createEl('div', { cls: 'pr-accent-grid', attr: { role: 'group', 'aria-label': 'انتخاب رنگ اصلی' } });
-        for (const [key, pal] of Object.entries(PALETTES)) {
-            const btn = swatchWrap.createEl('button', { cls: 'pr-accent-option' + (p.settings.palette === key ? ' is-active' : '') });
-            btn.type = 'button'; btn.title = pal.name; btn.setAttribute('aria-label', pal.name);
-            btn.setAttribute('aria-pressed', String(p.settings.palette === key));
-            const dot = btn.createEl('span', { cls: 'pr-accent-dot' });
-            dot.style.background = `linear-gradient(135deg,${pal.primary},${pal.secondary})`;
-            btn.createEl('span', { cls: 'pr-accent-name', text: pal.name });
-            btn.addEventListener('click', async () => {
-                p.settings.palette = key; await p.persist(); p.applyTheme();
-                swatchWrap.querySelectorAll('.pr-accent-option').forEach(el => {
-                    el.classList.remove('is-active'); el.setAttribute('aria-pressed', 'false');
-                });
-                btn.classList.add('is-active'); btn.setAttribute('aria-pressed', 'true');
-            });
+        const root = this.containerEl;
+        root.replaceChildren();
+        root.classList.add('pr-settings');
+        const hero = E(root, 'header', 'pr-settings-hero');
+        I(hero, 'sliders-horizontal', 'pr-brand-icon');
+        const text = E(hero, 'div');
+        E(text, 'h2', '', 'یادآوری، به سلیقهٔ شما');
+        E(text, 'p', '', 'رفتار، مقصد یادداشت‌ها و ظاهر را از همین‌جا تنظیم کنید.');
+        const state = E(root, 'div', 'pr-settings-status' + (this.p.api() ? ' is-connected' : ''));
+        I(state, this.p.api() ? 'circle-check' : 'circle-alert');
+        E(state, 'span', '', this.p.api() ? 'تقویم شمسی آماده است' : 'برای انتخاب تاریخ، Persian Calendar را فعال کنید');
+        const navigation = E(root, 'nav', 'pr-settings-nav');
+        navigation.setAttribute('aria-label', 'بخش‌های تنظیمات');
+        this.navButtons = new Map();
+        for (const [key, title, icon] of [
+            ['general', 'عمومی', 'settings-2'], ['daily', 'یادداشت روز', 'folder-open'],
+            ['appearance', 'ظاهر', 'palette'], ['tags', 'هشتگ‌ها', 'hash']
+        ]) this.navButtons.set(key, B(navigation, title, icon, 'pr-settings-nav-button', () => this.showPage(key)));
+        this.pageEl = E(root, 'div', 'pr-settings-page');
+        this.showPage(this.page);
+    }
+    showPage(page) {
+        this.page = page;
+        for (const [key, button] of this.navButtons) {
+            button.classList.toggle('is-active', page === key);
+            if (page === key) button.setAttribute('aria-current', 'page');
+            else button.removeAttribute('aria-current');
         }
+        this.previewPaint = null;
+        this.pageEl.replaceChildren();
+        this[page]();
+    }
+    section(title, description) {
+        const root = E(this.pageEl, 'section', 'pr-setting-section');
+        const head = E(root, 'div', 'pr-setting-section-head');
+        E(head, 'h3', '', title);
+        if (description) E(head, 'p', '', description);
+        return root;
+    }
+    async save(theme = false) {
+        await this.p.persist();
+        if (theme) { this.p.applyTheme(); this.previewPaint?.(); }
+    }
+    general() {
+        const p = this.p;
+        const behavior = this.section('رفتار یادآوری', 'تنظیمات اصلی، بدون پیچیدگی');
+        new Setting(behavior).setName('بازکردن ساعت کنار کار').setDesc('در دسکتاپ؛ برچسب تاریخ و کنترل‌های موبایل با یک لمس باز می‌شوند.')
+            .addDropdown(dropdown => dropdown.addOption('single', 'یک کلیک').addOption('double', 'دوبار کلیک')
+                .setValue(p.settings.clickMode).onChange(async value => { p.settings.clickMode = value; await this.save(); }));
+        new Setting(behavior).setName('قالب ذخیرهٔ یادآوری').setDesc('فقط نشانهٔ تاریخ در متن کارهای جدید را تعیین می‌کند.')
+            .addDropdown(dropdown => dropdown.addOption('jalali', 'شمسی — @j:').addOption('gregorian', 'میلادی — @')
+                .setValue(p.settings.dateFormat).onChange(async value => { p.settings.dateFormat = value; await this.save(); }));
+        const setting = new Setting(behavior).setName('کارهای نزدیک').setDesc('کارهایی که در این بازه موعدشان می‌رسد، «نزدیک» محسوب می‌شوند.');
+        const output = E(setting.controlEl, 'output', 'pr-slider-value', fa(p, p.settings.soonHours) + ' ساعت');
+        setting.addSlider(slider => {
+            slider.setLimits(1, 168, 1).setValue(p.settings.soonHours).onChange(async value => {
+                p.settings.soonHours = value;
+                output.textContent = fa(p, value) + ' ساعت';
+                await this.save(); p.refresh();
+            });
+            slider.sliderEl.dir = 'ltr';
+            slider.sliderEl.setAttribute('aria-label', 'بازهٔ کارهای نزدیک، بر حسب ساعت');
+        });
+        const alerts = this.section('هشدار سررسید', 'تا وقتی Obsidian باز است، موعد کارها بررسی می‌شود. در موبایل، بسته‌بودن برنامه یا توقف آن در پس‌زمینه ممکن است هشدار را تا بازگشت به برنامه به تأخیر بیندازد.');
+        new Setting(alerts).setName('نوع هشدار').addDropdown(dropdown => dropdown
+            .addOption('modal', 'پنجرهٔ هشدار').addOption('notice', 'پیام کوتاه').addOption('off', 'خاموش')
+            .setValue(p.settings.notificationMode).onChange(async value => { p.settings.notificationMode = value; await this.save(); p.scheduler?.wake(); }));
+        new Setting(alerts).setName('زمان پیش‌فرض یادآوری مجدد').addDropdown(dropdown => {
+            for (const value of [5, 10, 15, 30, 60]) dropdown.addOption(String(value), fa(p, value) + ' دقیقه');
+            dropdown.setValue(String(p.settings.snoozeMinutes)).onChange(async value => {
+                p.settings.snoozeMinutes = Number(value); await this.save();
+            });
+        });
+        new Setting(alerts).setName('آزمایش هشدار').setDesc('یک نمونه نمایش می‌دهد؛ هیچ کاری تغییر نمی‌کند.')
+            .addButton(button => button.setButtonText('نمایش نمونه').onClick(() => p.showAlerts([{
+                title: 'زمان انجام کار شما رسیده است', at: iso(new Date()), place: 'نمونهٔ مکان', tags: [],
+                path: p.settings.defaultNote, raw: ''
+            }], true)));
+        const note = this.section('افزودن سریع از فرمان‌ها', 'برای افزودن کار خارج از تقویم، یادداشت باز پیشنهاد می‌شود.');
+        new Setting(note).setName('یادداشت پیش‌فرض').setDesc('وقتی یادداشت بازی وجود ندارد، این مسیر پیشنهاد می‌شود.')
+            .addText(input => {
+                input.setPlaceholder('یادآوری‌ها.md').setValue(p.settings.defaultNote)
+                    .onChange(async value => { p.settings.defaultNote = value.trim() || DEFAULTS.defaultNote; await this.save(); });
+                input.inputEl.classList.add('pr-path-input');
+            });
+    }
+    daily() {
+        const p = this.p;
+        const intro = this.section('یادداشت روز انتخاب‌شده', 'کار جدید از سایدبار یا داشبورد، در یادداشت همان روز ذخیره می‌شود. اگر یادداشت وجود نداشته باشد، ساخته می‌شود.');
+        new Setting(intro).setName('استفاده از تنظیمات Daily notes').setDesc('پوشه و قالب نام از افزونهٔ اصلی Obsidian خوانده می‌شود؛ در غیر این صورت تنظیمات زیر استفاده می‌شود.')
+            .addToggle(toggle => toggle.setValue(p.settings.dailyUseCore).onChange(async value => {
+                p.settings.dailyUseCore = value; await this.save(); this.showPage('daily'); p.refresh();
+            }));
+        const templateSection = this.section('قالب یادداشت روز با Templater', 'قالب فقط هنگام ساخت یادداشت تازه اجرا می‌شود؛ سپس کار زیر عنوان تعیین‌شده قرار می‌گیرد.');
+        new Setting(templateSection).setName('استفاده از قالب Templater').addToggle(toggle => toggle
+            .setValue(p.settings.dailyUseTemplater).onChange(async value => {
+                p.settings.dailyUseTemplater = value; await this.save(); this.showPage('daily');
+            }));
+        if (p.settings.dailyUseTemplater) {
+            const templater = p.app.plugins.getPlugin('templater-obsidian');
+            if (!templater) E(templateSection, 'p', 'pr-setting-help', 'Templater را نصب و فعال کنید تا قالب اجرا شود.');
+            const folder = (templater?.settings?.templates_folder || '').replace(/^\/+|\/+$/g, '');
+            const files = p.app.vault.getMarkdownFiles().filter(file => !folder || file.path.startsWith(folder + '/'))
+                .sort((a, b) => a.path.localeCompare(b.path));
+            new Setting(templateSection).setName('قالب روزانه').setDesc(folder ? 'قالب‌های پوشهٔ ' + folder : 'یک یادداشت قالب از ولت انتخاب کنید.')
+                .addDropdown(dropdown => {
+                    dropdown.addOption('', 'انتخاب قالب…');
+                    if (p.settings.dailyTemplatePath && !files.some(file => file.path === p.settings.dailyTemplatePath))
+                        dropdown.addOption(p.settings.dailyTemplatePath, p.settings.dailyTemplatePath + ' (خارج از پوشه یا حذف‌شده)');
+                    for (const file of files) dropdown.addOption(file.path, file.path);
+                    dropdown.setValue(p.settings.dailyTemplatePath || '').onChange(async value => {
+                        p.settings.dailyTemplatePath = value; await this.save();
+                    });
+                });
+            E(templateSection, 'p', 'pr-setting-help', 'نام یادداشت از روز انتخاب‌شده ساخته می‌شود. برای تاریخ داخل قالب از عنوان فایل استفاده کنید؛ tp.date.now() تاریخ امروز را می‌دهد.');
+        }
+        const options = dailyOptions(p), useCore = options.source === 'obsidian';
+        if (p.settings.dailyUseCore && !useCore) E(intro, 'p', 'pr-setting-help', 'تنظیمات Daily notes در دسترس نیست؛ مقصد از تنظیمات دستی زیر ساخته می‌شود.');
+        const manual = this.section('مسیر و نام یادداشت', useCore ? 'این مقادیر از Daily notes گرفته می‌شوند.' : 'این تنظیمات را با نام یادداشت‌های روزانهٔ موجودتان هماهنگ کنید.');
+        let preview;
+        const update = () => {
+            if (!preview) return;
+            try { preview.textContent = dailyNotePath(p, new Date()); preview.classList.remove('is-error'); }
+            catch (error) { preview.textContent = error.message; preview.classList.add('is-error'); }
+        };
+        new Setting(manual).setName('پوشهٔ یادداشت‌های روز').setDesc('مسیر داخل ولت؛ خالی یعنی ریشهٔ ولت.')
+            .addText(input => {
+                input.setPlaceholder('Daily').setValue(useCore ? options.folder : p.settings.dailyFolder).setDisabled(useCore)
+                    .onChange(async value => { p.settings.dailyFolder = value.trim().replace(/^\/+|\/+$/g, ''); update(); await this.save(); p.refresh(); });
+                input.inputEl.classList.add('pr-path-input');
+            });
+        new Setting(manual).setName('تقویم نام یادداشت').setDesc('مستقل از قالب تاریخ داخل متن کار است.')
+            .addDropdown(dropdown => dropdown.addOption('gregorian', 'میلادی').addOption('jalali', 'شمسی')
+                .setValue(options.calendar).setDisabled(useCore).onChange(async value => {
+                    p.settings.dailyCalendar = value; update(); await this.save(); p.refresh();
+                }));
+        new Setting(manual).setName('قالب نام فایل').setDesc('YYYY سال، MM ماه، DD روز؛ مثل YYYY-MM-DD یا YYYY/MM/DD. متن ثابت را در [کروشه] بگذارید.')
+            .addText(input => {
+                input.setPlaceholder('YYYY-MM-DD').setValue(options.format).setDisabled(useCore)
+                    .onChange(async value => { p.settings.dailyFormat = value.trim() || DEFAULTS.dailyFormat; update(); await this.save(); p.refresh(); });
+                input.inputEl.dir = 'ltr';
+            });
+        const sample = E(manual, 'div', 'pr-daily-preview');
+        I(sample, 'file-text');
+        const text = E(sample, 'div');
+        E(text, 'small', '', 'نمونهٔ مسیر برای امروز');
+        preview = E(text, 'span');
+        update();
+        new Setting(manual).setName('عنوان بخش کارها').setDesc('کار زیر این عنوان قرار می‌گیرد؛ خالی بگذارید تا به انتهای یادداشت اضافه شود.')
+            .addText(input => input.setPlaceholder('## یادآوری‌ها').setValue(p.settings.dailyHeading)
+                .onChange(async value => { p.settings.dailyHeading = value.trim(); await this.save(); }));
+    }
+    appearance() {
+        const p = this.p;
+        const appearance = this.section('رنگ و پیش‌نمایش', 'یک زبان بصری مشترک برای سایدبار، داشبورد و مودال');
+        const preview = E(appearance, 'div', 'pr-settings-preview pr-card-surface');
+        E(preview, 'small', 'pr-eyebrow', 'پیش‌نمایش زنده');
+        const title = E(preview, 'div', 'pr-preview-task-title');
+        I(title, 'circle-check'); E(title, 'strong', '', 'آماده‌سازی برنامهٔ فردا');
+        const badges = E(preview, 'div', 'pr-preview-badges');
+        E(badges, 'span', 'pr-preview-date', '۱۴۰۵/۰۸/۰۲ · ۱۵:۳۰');
+        const previewRemaining = E(badges, 'span', 'pr-preview-remaining', 'فردا');
+        const previewItem = () => {
+            const day = new Date(); day.setDate(day.getDate() + 1); day.setHours(15, 30, 0, 0);
+            return { at: iso(day), done: false };
+        };
+        const paintPreview = () => paintRemaining(p, previewRemaining, previewItem());
+        this.previewPaint = paintPreview;
+        paintPreview();
+        const angleSetting = new Setting(appearance).setName('زاویهٔ گرادیانت').setDesc('جهت گرادیانت کارت‌ها و برچسب‌ها، از صفر تا ۳۶۰ درجه');
+        const angleOutput = E(angleSetting.controlEl, 'output', 'pr-slider-value', fa(p, gradientAngle(p.settings)) + '°');
+        angleSetting.addSlider(slider => {
+            slider.setLimits(0, 360, 5).setValue(gradientAngle(p.settings)).onChange(async value => {
+                p.settings.gradientAngle = value; angleOutput.textContent = fa(p, value) + '°'; await this.save(true);
+            });
+            slider.sliderEl.dir = 'ltr'; slider.sliderEl.setAttribute('aria-label', 'زاویهٔ گرادیانت');
+        });
+        const tintSetting = new Setting(appearance).setName('شدت رنگ کارت‌ها').setDesc('میزان ترکیب رنگ اصلی با زمینه؛ پیش‌نمایش و کارت‌ها یکسان تغییر می‌کنند.');
+        const tintOutput = E(tintSetting.controlEl, 'output', 'pr-slider-value', fa(p, cardTint(p.settings)) + '٪');
+        tintSetting.addSlider(slider => {
+            slider.setLimits(0, 50, 1).setValue(cardTint(p.settings)).onChange(async value => {
+                p.settings.cardTint = value; tintOutput.textContent = fa(p, value) + '٪'; await this.save(true);
+            });
+            slider.sliderEl.dir = 'ltr'; slider.sliderEl.setAttribute('aria-label', 'شدت رنگ کارت‌ها');
+        });
+        const grid = E(appearance, 'div', 'pr-accent-grid');
+        grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'رنگ اصلی افزونه');
+        for (const [key, palette] of Object.entries(PALETTES)) {
+            const button = B(grid, '', null, 'pr-accent-option', async () => {
+                p.settings.palette = key;
+                await this.save(true);
+                for (const element of grid.children) {
+                    const active = element === button;
+                    element.classList.toggle('is-active', active);
+                    element.setAttribute('aria-pressed', String(active));
+                }
+            });
+            const active = key === p.settings.palette;
+            button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active));
+            const dot = E(button, 'span', 'pr-accent-dot');
+            dot.style.background = `linear-gradient(var(--pr-gradient-angle,120deg), ${palette.primary}, ${palette.secondary})`;
+            E(button, 'span', 'pr-accent-name', palette.name);
+        }
+        const colors = this.section('برچسب‌های تاریخ و زمان', 'پالت آماده انتخاب کنید یا جزئیات رنگ را باز کنید.');
         const presets = [
-            ['اقیانوسی','#67D5ED','#A5B4FC','#438FBF'],
-            ['نعنایی','#6EE7B7','#A7F3D0','#299E76'],
-            ['اسطوخودوسی','#C4B5FD','#F0ABFC','#9B68C8'],
-            ['هلویی','#FDBA74','#FBCFE8','#CE8648'],
-            ['رز','#FDA4AF','#F9A8D4','#C96A8D'],
-            ['آسمانی','#93C5FD','#BAE6FD','#5D95CF']
+            ['اقیانوسی', '#67D5ED', '#A5B4FC', '#438FBF'], ['نعنایی', '#6EE7B7', '#A7F3D0', '#299E76'],
+            ['یاسی', '#C4B5FD', '#F0ABFC', '#9B68C8'], ['هلویی', '#FDBA74', '#FBCFE8', '#CE8648'],
+            ['رز', '#FDA4AF', '#F9A8D4', '#C96A8D'], ['آسمانی', '#93C5FD', '#BAE6FD', '#5D95CF']
         ];
         p.settings.badgeColors ||= {};
-        const badges = section('رنگ برچسب‌های تاریخ', 'سه نوع برچسب با تنظیم مستقل');
-        for (const [type, title, example] of [
-            ['inline','داخل یادداشت','۱۴۰۵/۰۸/۰۴ · ۱۵:۳۰'],
-            ['date','تاریخ سایدبار و داشبورد','۱۴۰۵/۰۸/۰۴'],
-            ['remaining','زمان باقی‌مانده','۷۲ روز دیگر']
+        for (const [type, label, sample] of [
+            ['inline', 'داخل یادداشت', '۱۴۰۵/۰۸/۰۲ · ۱۵:۳۰'],
+            ['date', 'تاریخ روی کارت', '۱۴۰۵/۰۸/۰۲'], ['remaining', 'زمان باقی‌مانده', 'فردا']
         ]) {
-            const item = badges.createEl('details', { cls: 'pr-badge-editor' });
-            const summary = item.createEl('summary', { cls: 'pr-badge-editor-title' });
-            summary.createEl('span', { text: title });
-            const pill = summary.createEl('span', { cls: 'pr-preview-pill', text: example });
-            const controls = item.createEl('div', { cls: 'pr-badge-controls' });
-            const initial = {...DEFAULTS.badgeColors[type], ...(p.settings.badgeColors[type] || {})};
+            const details = E(colors, 'details', 'pr-badge-editor');
+            const summary = E(details, 'summary', 'pr-badge-editor-title');
+            E(summary, 'span', '', label);
+            const pill = E(summary, 'span', 'pr-preview-pill', sample);
+            const controls = E(details, 'div', 'pr-badge-controls');
+            const initial = { ...DEFAULTS.badgeColors[type], ...(p.settings.badgeColors[type] || {}) };
             const pickers = {};
             const paint = () => {
-                const v = {...DEFAULTS.badgeColors[type], ...(p.settings.badgeColors[type] || {})};
-                pill.style.background = `linear-gradient(125deg,${v.a},${v.b})`;
-                pill.style.borderColor = v.border;
+                const value = { ...DEFAULTS.badgeColors[type], ...(p.settings.badgeColors[type] || {}) };
+                pill.style.background = `linear-gradient(var(--pr-gradient-angle,120deg), ${value.a}, ${value.b})`;
+                pill.style.borderColor = value.border;
+                pill.style.color = contrastText(value.a, value.b);
             };
             paint();
-            const grid = controls.createEl('div', { cls: 'pr-mini-palette-grid' });
-            for (const [name,a,b,border] of presets) {
-                const btn = grid.createEl('button', { cls: 'pr-mini-palette' });
-                btn.type = 'button'; btn.title = name; btn.setAttribute('aria-label', name);
-                btn.style.background = `linear-gradient(125deg,${a},${b})`;
-                btn.style.borderColor = border;
-                btn.createEl('span', { text: name });
-                btn.onclick = async () => {
-                    p.settings.badgeColors[type] = {a,b,border};
-                    await p.persist(); p.applyTheme(); paint();
-                    for (const field of ['a','b','border']) pickers[field]?.setValue(p.settings.badgeColors[type][field]);
-                };
+            const paletteGrid = E(controls, 'div', 'pr-mini-palette-grid');
+            for (const [name, a, b, border] of presets) {
+                const button = B(paletteGrid, name, null, 'pr-mini-palette', async () => {
+                    p.settings.badgeColors[type] = { a, b, border };
+                    await this.save(true); paint();
+                    for (const key of ['a', 'b', 'border']) pickers[key]?.setValue(p.settings.badgeColors[type][key]);
+                });
+                button.style.background = `linear-gradient(var(--pr-gradient-angle,120deg), ${a}, ${b})`;
+                button.style.borderColor = border;
             }
-            for (const [field,label] of [['a','رنگ اول'],['b','رنگ دوم'],['border','حاشیه']]) {
-                new Setting(controls).setName(label).addColorPicker(cp => {
-                    pickers[field] = cp;
-                    cp.setValue(initial[field]).onChange(async hex => {
-                        p.settings.badgeColors[type] ||= {...initial};
-                        p.settings.badgeColors[type][field] = hex;
-                        await p.persist(); p.applyTheme(); paint();
+            for (const [key, name] of [['a', 'رنگ اول'], ['b', 'رنگ دوم'], ['border', 'حاشیه']]) {
+                new Setting(controls).setName(name).addColorPicker(picker => {
+                    pickers[key] = picker;
+                    picker.setValue(initial[key]).onChange(async value => {
+                        p.settings.badgeColors[type] = { ...initial, ...(p.settings.badgeColors[type] || {}), [key]: value };
+                        await this.save(true); paint();
                     });
                 });
             }
+            new Setting(controls).setName('بازگشت این برچسب به پیش‌فرض').addButton(button => button.setButtonText('بازنشانی').onClick(async () => {
+                p.settings.badgeColors[type] = { ...DEFAULTS.badgeColors[type] };
+                await this.save(true); paint();
+                for (const key of ['a', 'b', 'border']) pickers[key]?.setValue(p.settings.badgeColors[type][key]);
+            }));
         }
-        new Setting(badges).setName('رنگ متن تاریخ داخل یادداشت').setDesc('برای برچسب‌های روشن، رنگ تیره خواناتر است.').addColorPicker(cp => cp.setValue(p.settings.inlineTextColor || DEFAULTS.inlineTextColor).onChange(async value => { p.settings.inlineTextColor = value; await p.persist(); p.applyTheme(); }));
-        // --- رنگ هشتگ‌ها ---
-        const tags = section('رنگ کارت‌ها بر اساس هشتگ', 'رنگ اختصاصی کارت تسک‌ها');
-        tags.createEl('p', { text: 'فقط هشتگ‌هایی که دستی ثبت می‌کنی، ردیف تسک را رنگی می‌کنند. خود هشتگ هیچ رنگ یا استایلی از این افزونه نمی‌گیرد.', cls: 'pr-setting-help' });
-
-        let tagInput;
-        new Setting(tags).setName('افزودن هشتگ').addText(t => { tagInput = t; t.setPlaceholder('مثلاً مهم'); }).addButton(b => b.setButtonText('افزودن').setCta().onClick(async () => { const name = tagInput.getValue().trim().replace(/^#/, ''); if (!/^[\p{L}\p{N}_-]+$/u.test(name)) {
-            new Notice('نام هشتگ معتبر نیست');
-            return;
-        } if (!(name in p.settings.tagColors))
-            p.settings.tagColors[name] = PALETTES[p.settings.palette]?.primary || '#a78bfa'; await p.persist(); this.display(); p.refresh(); p.requestEditorUpdate(); }));
-
-        for (const tag of Object.keys(p.settings.tagColors)) {
-            new Setting(tags).setName('#' + tag).addColorPicker(c => c.setValue(p.settings.tagColors[tag]).onChange(async (v) => { p.settings.tagColors[tag] = v; await p.persist(); p.refresh(); p.requestEditorUpdate(); })).addExtraButton(b => b.setIcon('trash').setTooltip('حذف رنگ هشتگ').onClick(async () => { delete p.settings.tagColors[tag]; await p.persist(); this.display(); p.refresh(); p.requestEditorUpdate(); }));
+        new Setting(colors).setName('رنگ متن برچسب داخل یادداشت').addColorPicker(picker => picker.setValue(p.settings.inlineTextColor || DEFAULTS.inlineTextColor)
+            .onChange(async value => { p.settings.inlineTextColor = value; await this.save(true); }));
+        const paintRules = this.remainingControls();
+        this.previewPaint = () => { paintPreview(); paintRules(); };
+    }
+    remainingControls() {
+        const p = this.p;
+        p.settings.remainingRules ||= DEFAULTS.remainingRules.map(rule => ({ ...rule }));
+        p.settings.remainingColors ||= structuredClone(DEFAULTS.remainingColors);
+        const root = this.section('رنگ زمان باقی‌مانده', '«امروز» رنگ مستقل دارد. برای روزهای آینده، نزدیک‌ترین بازهٔ فعال انتخاب می‌شود: مثلاً ۱ روز، سپس تا ۷ روز؛ بیشتر از آن از رنگ عمومی استفاده می‌کند. بازه‌ها بر اساس روز تقویمی هستند.');
+        const samples = E(root, 'div', 'pr-remaining-samples');
+        const previewItems = [];
+        for (const offset of [0, 1, 7, 27, -1]) {
+            const span = E(samples, 'span', 'pr-rule-sample');
+            previewItems.push({ offset, span });
         }
+        const paintSamples = () => {
+            const now = new Date();
+            for (const { offset, span } of previewItems) {
+                const day = new Date(now); day.setDate(day.getDate() + offset);
+                // Keep the "today" preview in the future even at 23:59.
+                if (offset === 0) day.setHours(23, 59, 59, 999);
+                else day.setHours(23, 59, 0, 0);
+                paintRemaining(p, span, { at: iso(day), done: false }, offset === 0 ? new Date(day.getTime() - 60000) : now);
+            }
+        };
+        new Setting(root).setName('رنگ‌بندی بر اساس موعد').addToggle(toggle => toggle
+            .setValue(p.settings.remainingRulesEnabled !== false).onChange(async value => {
+                p.settings.remainingRulesEnabled = value; await this.save(true);
+            }));
+        const editors = E(root, 'div');
+        let paints = [];
+        const draw = () => {
+            editors.replaceChildren(); paints = [];
+            const colorEditor = (colors, title, subtitle, rule = null) => {
+                const details = E(editors, 'details', 'pr-badge-editor');
+                const summary = E(details, 'summary', 'pr-badge-editor-title');
+                const name = E(summary, 'span', '', title);
+                const pill = E(summary, 'span', 'pr-preview-pill', subtitle);
+                const controls = E(details, 'div', 'pr-badge-controls');
+                const paint = () => {
+                    pill.style.background = `linear-gradient(var(--pr-gradient-angle,120deg),${colors.a},${colors.b})`;
+                    pill.style.borderColor = colors.border; pill.style.color = contrastText(colors.a, colors.b);
+                };
+                paints.push(paint); paint();
+                if (rule) {
+                    new Setting(controls).setName('حداکثر روز باقی‌مانده').setDesc('این بازه تا این تعداد روز، با احتساب خود آن روز، اعمال می‌شود.')
+                        .addText(input => {
+                            input.setValue(String(rule.days)); input.inputEl.type = 'number';
+                            input.inputEl.min = '1'; input.inputEl.max = '3650'; input.inputEl.step = '1';
+                            input.inputEl.setAttribute('aria-label', 'حداکثر روز باقی‌مانده');
+                            input.onChange(async value => {
+                                const days = Number(en(p, value));
+                                if (!Number.isInteger(days) || days < 1 || days > 3650) {
+                                    input.inputEl.setAttribute('aria-invalid', 'true'); return;
+                                }
+                                input.inputEl.removeAttribute('aria-invalid'); rule.days = days;
+                                name.textContent = 'تا ' + fa(p, days) + ' روز مانده'; pill.textContent = fa(p, days) + ' روز دیگر';
+                                await this.save(true);
+                            });
+                        });
+                    new Setting(controls).setName('این بازه فعال باشد').addToggle(toggle => toggle
+                        .setValue(rule.enabled !== false).onChange(async value => { rule.enabled = value; await this.save(true); }));
+                }
+                for (const [key, label] of [['a', 'رنگ اول'], ['b', 'رنگ دوم'], ['border', 'حاشیه']]) {
+                    new Setting(controls).setName(label).addColorPicker(picker => picker.setValue(colors[key]).onChange(async value => {
+                        colors[key] = value; paint(); await this.save(true);
+                    }));
+                }
+                if (rule) new Setting(controls).setName('حذف این بازه').addButton(button => button.setButtonText('حذف').onClick(async () => {
+                    p.settings.remainingRules = p.settings.remainingRules.filter(item => item !== rule);
+                    await this.save(true); draw();
+                }));
+            };
+            for (const [key, label] of [['today', 'امروز'], ['overdue', 'زمان گذشته'], ['done', 'انجام‌شده']])
+                colorEditor(p.settings.remainingColors[key], label, label);
+            for (const rule of p.settings.remainingRules)
+                colorEditor(rule, 'تا ' + fa(p, rule.days) + ' روز مانده', fa(p, rule.days) + ' روز دیگر', rule);
+        };
+        new Setting(root).setName('بازهٔ دلخواه').setDesc('بازه‌های ۱ و ۷ روز از قبل آماده‌اند؛ می‌توانید تعداد روز و رنگ آن‌ها را تغییر دهید.')
+            .addButton(button => button.setButtonText('افزودن بازه').onClick(async () => {
+                p.settings.remainingRules.push({ id: 'range-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), days: 3,
+                    enabled: true, a: '#C4B5FD', b: '#E9D5FF', border: '#A18ACF' });
+                await this.save(true); draw();
+            }));
+        draw(); paintSamples();
+        return () => { paintSamples(); paints.forEach(paint => paint()); };
+    }
+    tags() {
+        const p = this.p;
+        const root = this.section('رنگ کارها بر اساس هشتگ', 'رنگ انتخابی روی کارت و ردیف کار اعمال می‌شود؛ ظاهر خود هشتگ را پوستهٔ Obsidian تعیین می‌کند.');
+        let input;
+        const add = async () => {
+            const name = input.getValue().trim().replace(/^#/, '');
+            if (!/^[\p{L}\p{N}_-]+$/u.test(name)) { new Notice('یک هشتگ معتبر وارد کنید'); return; }
+            if (!(name in p.settings.tagColors)) p.settings.tagColors[name] = PALETTES[p.settings.palette]?.primary || PALETTES.lavender.primary;
+            input.setValue(''); await this.save(true); draw();
+        };
+        new Setting(root).setName('هشتگ جدید').addText(text => {
+            input = text;
+            text.setPlaceholder('مثلاً مهم');
+            text.inputEl.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.isComposing) add(); });
+        }).addButton(button => button.setButtonText('افزودن').setCta().onClick(add));
+        const list = E(root, 'div', 'pr-tag-settings-list');
+        const draw = () => {
+            list.replaceChildren();
+            if (!Object.keys(p.settings.tagColors).length) E(list, 'p', 'pr-setting-help', 'هنوز رنگی ثبت نشده؛ اولین هشتگ را از کادر بالا اضافه کنید.');
+            for (const tag of Object.keys(p.settings.tagColors)) {
+                new Setting(list).setName('#' + tag).addColorPicker(picker => picker.setValue(p.settings.tagColors[tag]).onChange(async value => {
+                    p.settings.tagColors[tag] = value; await this.save(true);
+                })).addExtraButton(button => button.setIcon('trash-2').setTooltip('حذف رنگ ' + tag).onClick(async () => {
+                    delete p.settings.tagColors[tag]; await this.save(true); draw();
+                }));
+            }
+        };
+        draw();
     }
 }
 module.exports = { SettingsTab };
+
 }
 };
 const __prCache = Object.create(null);

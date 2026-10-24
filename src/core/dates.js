@@ -6,7 +6,7 @@ function localDateKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-$
 function fromISO(v) { const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)$/.exec(v || ''); if (!m)
     return null; const [y, mo, d, h, mi] = m.slice(1).map(Number); const x = new Date(y, mo - 1, d, h, mi); return x.getFullYear() === y && x.getMonth() === mo - 1 && x.getDate() === d && x.getHours() === h && x.getMinutes() === mi ? x : null; }
 function fa(p, x) { return p.api()?.toFaNumber?.(String(x)) ?? String(x).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[+d]); }
-function en(p, x) { return p.api()?.toEnNumber?.(String(x)) ?? String(x).replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))); }
+function en(p, x) { return String(p.api()?.toEnNumber?.(String(x)) ?? x).replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))); }
 function jalali(p, d) { return p.api()?.gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate()) ?? null; }
 function fromJ(p, y, m, d) { const a = p.api(); if (!a)
     return null; const x = a.jalaliToDate(y, m, d); if (!(x instanceof Date) || isNaN(x.getTime()))

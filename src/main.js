@@ -4,20 +4,29 @@ const { SIDE, DASH, DEFAULTS, PALETTES, TASK, PLACE } = require('./core/constant
 const { cssColor, parseTask, buildTask, status, paintTask } = require('./core/tasks');
 const { fromISO, dateFa, clockFa } = require('./core/dates');
 const { E, I } = require('./shared/dom');
+const { dailyNotePath, dailyOptions, notePath, appendLine, insertDailyTask, createDailyFromTemplate, withNoteWrite } = require('./core/daily-notes');
 const { refreshEffect, editorExtension } = require('./editor/widgets');
 const { TaskModal } = require('./ui/task-modal');
+const { ReminderAlert } = require('./ui/reminder-alert');
+const { ReminderScheduler, reminderKey, pendingReminders } = require('./core/reminders');
+const { gradientAngle, cardTint, contrastText } = require('./core/appearance');
 const { Sidebar } = require('./views/sidebar');
 const { Dashboard } = require('./views/dashboard');
 const { SettingsTab } = require('./settings');
 module.exports = class PersianReminder extends Plugin {
     async onload() {
         this.settings = { ...DEFAULTS, ...await this.loadData() };
-        this.settings.tagColors ||= {};
+        this.settings.tagColors = { ...(this.settings.tagColors || {}) };
         this.settings.pinned ||= [];
-        this.settings.notified ||= {};
+        this.settings.notified = { ...(this.settings.notified || {}) };
+        this.settings.remainingRules = (this.settings.remainingRules || DEFAULTS.remainingRules).map(rule => ({ ...rule }));
+        this.settings.remainingColors = Object.fromEntries(Object.keys(DEFAULTS.remainingColors).map(key =>
+            [key, { ...DEFAULTS.remainingColors[key], ...(this.settings.remainingColors?.[key] || {}) }]));
         this.index = new Map();
         this.scanSerial = new Map();
         this.scanTimers = new Map();
+        this.unloading = false;
+        this.scheduler = new ReminderScheduler(this);
         this.applyTheme();
         this.registerView(SIDE, leaf => new Sidebar(leaf, this));
         this.registerView(DASH, leaf => new Dashboard(leaf, this));
@@ -39,12 +48,18 @@ module.exports = class PersianReminder extends Plugin {
         this.registerEvent(this.app.workspace.on('editor-change', (editor, view) => { if (!view?.file)
             return; const path = view.file.path; if (this.scanTimers.has(path))
             window.clearTimeout(this.scanTimers.get(path)); this.scanTimers.set(path, window.setTimeout(() => { this.scanTimers.delete(path); this.indexText(path, editor.getValue()); }, 350)); }));
-        this.app.workspace.onLayoutReady(async () => { await this.scanAll(); if (!this.api())
-            new Notice('برای تقویم شمسی افزونه Persian Calendar را فعال کنید'); await this.notify(); });
-        this.registerInterval(window.setInterval(() => { this.notify(); this.refresh(); }, 30000));
+        const resume = () => { if (!document.hidden) this.scheduler.wake(true); };
+        this.registerDomEvent(document, 'visibilitychange', resume);
+        this.registerDomEvent(window, 'focus', resume);
+        this.registerDomEvent(window, 'pageshow', resume);
+        this.app.workspace.onLayoutReady(async () => {
+            if (this.unloading) return;
+            await this.scheduler.start();
+            if (!this.api()) new Notice('برای تقویم شمسی افزونه Persian Calendar را فعال کنید');
+        });
     }
-    onunload() { for (const timer of this.scanTimers.values())
-        window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-accent-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
+    onunload() { this.unloading = true; this.scheduler?.stop(); this.alertModal?.close(); for (const timer of this.scanTimers.values())
+        window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-gradient-angle', '--pr-card-tint', '--pr-accent-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border','text'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
     api() { return this.app.plugins.getPlugin('persian-calendar')?.api || null; }
     async persist() { await this.saveData(this.settings); }
     applyTheme() {
@@ -55,8 +70,11 @@ module.exports = class PersianReminder extends Plugin {
         for (const type of ['inline','date','remaining']) {
             const v = { ...defaults[type], ...(colors[type] || {}) };
             for (const [k, val] of Object.entries(v)) vars[`--pr-${type}-${k}`] = val;
+            if (type !== 'inline') vars[`--pr-${type}-text`] = contrastText(v.a, v.b);
         }
         for (const [key, value] of Object.entries(vars)) document.body.style.setProperty(key, cssColor(value));
+        document.body.style.setProperty('--pr-gradient-angle', gradientAngle(this.settings) + 'deg');
+        document.body.style.setProperty('--pr-card-tint', cardTint(this.settings) + '%');
         this.refresh(); this.requestEditorUpdate();
     }
     requestEditorUpdate() { for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
@@ -78,6 +96,7 @@ module.exports = class PersianReminder extends Plugin {
     edit(item, tab = 'date') { if (!this.api())
         return new Notice('افزونه Persian Calendar فعال نیست'); new TaskModal(this, item, null, tab).open(); }
     destination() { return this.app.workspace.getActiveFile()?.path || this.settings.defaultNote; }
+    dailyDestination(date) { return dailyNotePath(this, date); }
     editor(path) { return this.app.workspace.getLeavesOfType('markdown').map(l => l.view).find(v => v instanceof MarkdownView && v.file?.path === path) || null; }
     openFromCM(cm, line, raw) { const view = this.app.workspace.getLeavesOfType('markdown').map(l => l.view).find(v => v instanceof MarkdownView && v.editor?.cm === cm); if (view?.file)
         this.openTask(view.file.path, line, raw);
@@ -98,12 +117,14 @@ module.exports = class PersianReminder extends Plugin {
         console.error('[Persian Reminder scan]', e);
     } }
     indexText(path, source, refresh = true) { const arr = []; source.split(/\r?\n/).forEach((raw, line) => { const it = parseTask(this, raw); if (it?.at)
-        arr.push({ ...it, path, line }); }); this.index.set(path, arr); if (refresh)
+        arr.push({ ...it, path, line }); }); this.index.set(path, arr); this.scheduler?.wake(); if (refresh)
         this.refresh(); }
     items() { return [...this.index.values()].flat().sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at)); }
     refresh() { for (const type of [SIDE, DASH])
-        for (const leaf of this.app.workspace.getLeavesOfType(type))
-            leaf.view.render?.(); }
+        for (const leaf of this.app.workspace.getLeavesOfType(type)) {
+            if (leaf.view.refresh) leaf.view.refresh();
+            else leaf.view.render?.();
+        } }
     findLine(lines, item) { if (lines[item.line] === item.raw)
         return item.line; const hits = []; lines.forEach((l, i) => { if (l === item.raw)
         hits.push(i); }); return hits.length === 1 ? hits[0] : -1; }
@@ -136,38 +157,57 @@ module.exports = class PersianReminder extends Plugin {
     } }
     async remove(item) { return this.change(item, old => { const parsed = parseTask(this, old), m = TASK.exec(old); if (!m || !parsed)
         return old; return m[1] + m[2] + m[3] + [parsed.title, ...parsed.tags.map(t => '#' + t), parsed.place ? `📍[${parsed.place}]` : null].filter(Boolean).join(' '); }); }
-    async add(path, values) { let target = (path || this.settings.defaultNote).trim() || this.settings.defaultNote; if (!target.toLowerCase().endsWith('.md'))
-        target += '.md'; const line = buildTask(this, null, values); try {
-        let file = this.app.vault.getAbstractFileByPath(target);
-        if (!file) {
-            const parts = target.split('/');
-            for (let i = 1; i < parts.length; i++) {
-                const folder = parts.slice(0, i).join('/');
-                if (!this.app.vault.getAbstractFileByPath(folder))
-                    await this.app.vault.createFolder(folder);
-            }
-            file = await this.app.vault.create(target, line + '\n');
-        }
-        else if (!(file instanceof TFile))
-            return new Notice('مسیر، فایل Markdown نیست'), false;
-        else {
-            const view = this.editor(file.path);
-            if (view) {
-                const ed = view.editor, source = ed.getValue(), sep = source.includes('\r\n') ? '\r\n' : '\n';
-                ed.replaceRange((source && !source.endsWith('\n') ? sep : '') + line + sep, ed.offsetToPos(source.length));
-                this.indexText(file.path, ed.getValue());
+    async add(path, values, options = {}) {
+        try {
+            const date = fromISO(values.at);
+            const target = options.daily ? this.dailyDestination(date) : notePath(path || this.settings.defaultNote);
+            const line = buildTask(this, null, values);
+            const insert = source => options.daily
+                ? insertDailyTask(source, line, dailyOptions(this).heading) : appendLine(source, line);
+            return await withNoteWrite(this, target, async () => {
+                let file = this.app.vault.getAbstractFileByPath(target);
+                let alreadyInserted = false;
+                if (!file) {
+                    const parts = target.split('/');
+                    for (let i = 1; i < parts.length; i++) {
+                        const folder = parts.slice(0, i).join('/');
+                        if (!this.app.vault.getAbstractFileByPath(folder)) {
+                            try { await this.app.vault.createFolder(folder); }
+                            catch (error) {
+                                const existing = this.app.vault.getAbstractFileByPath(folder);
+                                if (!existing || existing instanceof TFile) throw error;
+                            }
+                        }
+                    }
+                    if (options.daily && this.settings.dailyUseTemplater) {
+                        file = await createDailyFromTemplate(this, target);
+                    } else {
+                        file = await this.app.vault.create(target, insert(''));
+                        alreadyInserted = true;
+                    }
+                }
+                if (!(file instanceof TFile)) { new Notice('مسیر، فایل Markdown نیست'); return false; }
+                if (!alreadyInserted) {
+                    const view = this.editor(file.path);
+                    if (view) {
+                        const ed = view.editor, source = ed.getValue(), next = insert(source);
+                        let at = 0;
+                        while (at < source.length && source[at] === next[at]) at++;
+                        let end = source.length, nextEnd = next.length;
+                        while (end > at && nextEnd > at && source[end - 1] === next[nextEnd - 1]) { end--; nextEnd--; }
+                        ed.replaceRange(next.slice(at, nextEnd), ed.offsetToPos(at), ed.offsetToPos(end));
+                        this.indexText(file.path, ed.getValue());
+                        return true;
+                    }
+                    await this.app.vault.process(file, insert);
+                }
+                await this.scan(file);
                 return true;
-            }
-            await this.app.vault.process(file, source => { const sep = source.includes('\r\n') ? '\r\n' : '\n'; return source + (source && !source.endsWith('\n') ? sep : '') + line + sep; });
+            });
+        } catch (error) {
+            console.error(error); new Notice('خطا در افزودن کار: ' + error.message); return false;
         }
-        await this.scan(file);
-        return true;
     }
-    catch (e) {
-        console.error(e);
-        new Notice('خطا در افزودن کار: ' + e.message);
-        return false;
-    } }
     async openFile(item) { const file = this.app.vault.getAbstractFileByPath(item.path); if (!(file instanceof TFile))
         return; const leaf = this.app.workspace.getLeaf('tab'); await leaf.openFile(file); if (leaf.view instanceof MarkdownView) {
         const editor = leaf.view.editor, n = this.findLine(editor.getValue().split(/\r?\n/), item), line = n < 0 ? item.line : n;
@@ -249,23 +289,35 @@ module.exports = class PersianReminder extends Plugin {
             console.error('[Persian Reminder reading]', e);
         }
     }
-    async notify() { let changed = false, now = Date.now(); for (const item of this.items()) {
-        if (item.done)
-            continue;
-        const d = fromISO(item.at);
-        if (!d)
-            continue;
-        const elapsed = now - d.getTime();
-        if (elapsed < 0 || elapsed > 86400000)
-            continue;
-        const key = item.path + '|' + item.raw;
-        if (this.settings.notified[key])
-            continue;
-        this.settings.notified[key] = now;
-        changed = true;
-        new Notice('⏰ ' + item.title + (item.place ? '\n📍 ' + item.place : ''), 10000);
-    } if (changed) {
-        this.settings.notified = Object.fromEntries(Object.entries(this.settings.notified).sort((a, b) => b[1] - a[1]).slice(0, 500));
-        await this.persist();
-    } }
+    showAlerts(items, preview = false) {
+        if (this.unloading) return;
+        if (preview) return new ReminderAlert(this, items, true).open();
+        if (this.alertModal) this.alertModal.enqueue(items);
+        else {
+            const modal = new ReminderAlert(this, items);
+            this.alertModal = modal;
+            try { modal.open(); }
+            catch (error) { this.alertModal = null; throw error; }
+        }
+    }
+    async notify() {
+        if (this.notifying || this.unloading || this.settings.notificationMode === 'off') return;
+        // Hidden WebViews must not mark unseen dialogs as delivered.
+        if (typeof document !== 'undefined' && document.hidden) return;
+        this.notifying = true;
+        try {
+            const now = Date.now();
+            const due = pendingReminders(this, now).filter(item => fromISO(item.at).getTime() <= now);
+            if (!due.length) return;
+            if (this.settings.notificationMode === 'notice') {
+                for (const item of due) new Notice('⏰ ' + item.title + (item.place ? '\n📍 ' + item.place : ''), 10000);
+            } else this.showAlerts(due);
+            // Record delivery only after the alert has actually opened.
+            for (const item of due) this.settings.notified[reminderKey(item)] = now;
+            this.settings.notified = Object.fromEntries(Object.entries(this.settings.notified)
+                .filter(([, time]) => Number(time) >= now - 7 * 86400000));
+            await this.persist();
+        } catch (error) { console.error('[Persian Reminder notify]', error); }
+        finally { this.notifying = false; }
+    }
 };

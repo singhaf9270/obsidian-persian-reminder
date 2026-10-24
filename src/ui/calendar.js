@@ -16,9 +16,9 @@ class Calendar {
         if (!a)
             return;
         const head = E(this.parent, 'div', 'pr-calendar-head');
-        B(head, '', 'chevron-right', 'pr-icon', () => this.move(-1));
+        B(head, '', 'chevron-right', 'pr-icon', () => this.move(-1)).setAttribute('aria-label', 'ماه قبل');
         E(head, 'strong', '', a.jalaliMonthName(this.m) + ' ' + fa(p, this.y));
-        B(head, '', 'chevron-left', 'pr-icon', () => this.move(1));
+        B(head, '', 'chevron-left', 'pr-icon', () => this.move(1)).setAttribute('aria-label', 'ماه بعد');
         B(head, 'امروز', null, 'pr-today', () => { this.selected = new Date(); const j = jalali(p, this.selected); this.y = j.jy; this.m = j.jm; this.onChange(new Date(this.selected)); this.draw(); });
         const grid = E(this.parent, 'div', 'pr-calendar-grid');
         ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].forEach(x => E(grid, 'span', 'pr-weekday', x));
@@ -52,7 +52,8 @@ class Calendar {
                 const indicator = E(cell, 'span', 'pr-calendar-count', total > 1 ? fa(p, total) : '');
                 indicator.setAttribute('aria-label', fa(p, total) + ' یادآوری');
             }
-            cell.setAttribute('aria-label', `${day} ${a.jalaliMonthName(this.m)}`);
+            cell.setAttribute('aria-label', `${fa(p, day)} ${a.jalaliMonthName(this.m)} ${fa(p, this.y)}`);
+            cell.setAttribute('aria-pressed', String(k === dateKey(this.selected)));
         }
     }
 }

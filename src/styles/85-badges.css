@@ -1,7 +1,12 @@
 /* Independently configurable pill badges; selectors restricted to this plugin. */
-.pr-inline-date{border-radius:999px;border:2px solid var(--pr-inline-border,#438fbf);background:linear-gradient(125deg,var(--pr-inline-a,#67d5ed),var(--pr-inline-b,#a5b4fc));color:var(--pr-inline-text-color,#182e3a);padding:4px 11px}
-.pr-inline-date.pr-style-plain,.pr-inline-date.pr-style-soft,.pr-inline-date.pr-style-vivid{background:linear-gradient(125deg,var(--pr-inline-a,#67d5ed),var(--pr-inline-b,#a5b4fc));color:var(--pr-inline-text-color,#182e3a)}
-.pr-task-card .pr-card-date{border-radius:999px;border:2px solid var(--pr-date-border,#548bcb);background:linear-gradient(125deg,var(--pr-date-a,#93c5fd),var(--pr-date-b,#bae6fd));color:#182e3a}
-.pr-task-card .pr-remaining,.pr-task-card .pr-remaining.is-today,.pr-task-card .pr-remaining.is-tomorrow,.pr-task-card .pr-remaining.is-overdue{border-radius:999px;border:2px solid var(--pr-remaining-border,#39a781);background:linear-gradient(125deg,var(--pr-remaining-a,#6ee7b7),var(--pr-remaining-b,#a7f3d0));color:#182e3a;padding:4px 10px}
+.pr-inline-date{border-radius:999px;border:2px solid var(--pr-inline-border,#438fbf);background:linear-gradient(var(--pr-gradient-angle, 120deg),var(--pr-inline-a,#67d5ed),var(--pr-inline-b,#a5b4fc));color:var(--pr-inline-text-color,#182e3a);padding:4px 11px}
+.pr-inline-date.pr-style-plain,.pr-inline-date.pr-style-soft,.pr-inline-date.pr-style-vivid{background:linear-gradient(var(--pr-gradient-angle, 120deg),var(--pr-inline-a,#67d5ed),var(--pr-inline-b,#a5b4fc));color:var(--pr-inline-text-color,#182e3a)}
+.pr-task-card .pr-card-date{border-radius:999px;border:2px solid var(--pr-date-border,#548bcb);background:linear-gradient(var(--pr-gradient-angle, 120deg),var(--pr-date-a,#93c5fd),var(--pr-date-b,#bae6fd));color:var(--pr-date-text,#182e3a)}
+.pr-task-card .pr-remaining, .pr-settings .pr-preview-remaining, .pr-settings .pr-rule-sample {
+  border-radius: 999px; border: 1px solid var(--pr-pill-border, var(--pr-remaining-border));
+  background: linear-gradient(var(--pr-gradient-angle, 120deg), var(--pr-pill-a, var(--pr-remaining-a)), var(--pr-pill-b, var(--pr-remaining-b)));
+  color: var(--pr-pill-text, var(--pr-remaining-text, #182e3a)); padding: 4px 10px; line-height: 1.5;
+}
+
 .pr-task-card .pr-plain-tags{display:flex;gap:5px;flex-wrap:wrap}
 /* Native Obsidian .tag class is left free for active theme and third-party CSS. */
