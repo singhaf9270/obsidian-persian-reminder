@@ -1,4 +1,33 @@
-# ⏰ Persian Reminder | یادآور فارسی آبسیدین
+# ⏰ Persian Reminder — Obsidian Plugin
+
+Persian Reminder is a Persian-language task reminder plugin for Obsidian. It integrates with the **Persian Calendar** community plugin to select Jalali dates and provides a clock-style time picker, hashtags, locations, and task management views.
+
+## Features
+
+- Jalali (Solar Hijri) date selection through the Persian Calendar plugin
+- Clock-style hour and minute picker
+- Task reminders with sidebar and dashboard views
+- Hashtag and location fields
+- Customizable task colors and gradients
+- Right-to-left Persian interface, with a three-tab reminder dialog for date, time, and details
+- Desktop and mobile support
+
+## Requirements and installation
+
+Install and enable the **Persian Calendar** plugin first.
+
+Download `main.js`, `manifest.json`, and `styles.css` from the matching [GitHub release](https://github.com/singhaf9270/obsidian-persian-reminder/releases). Place them in `YourVault/.obsidian/plugins/persian-reminder/`, then enable Persian Reminder in **Settings → Community plugins**.
+
+Keep your existing `data.json` when updating manually.
+
+## Bug reports
+
+Please use this repository's Issues tab to report bugs. For mobile issues, include your device model, Obsidian version, and a screenshot when possible.
+
+---
+
+## راهنمای فارسی
+
 
 افزونه‌ای فارسی برای مدیریت وظایف و یادآوری‌ها در **Obsidian** با پشتیبانی از تقویم جلالی، ساعت، هشتگ و مکان.
 
