@@ -9,7 +9,6 @@
   padding: 16px;
   max-height: min(680px,calc(100dvh - 30px));
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .pr-modal-header {

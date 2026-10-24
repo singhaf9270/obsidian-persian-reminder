@@ -43,7 +43,6 @@
   gap: 5px;
   overflow-x: auto;
   padding: 9px 0 6px;
-  scrollbar-width: none;
 }
 
 .pr-sidebar-tabs::-webkit-scrollbar {
@@ -79,5 +78,4 @@
   flex-direction: column;
   gap: 8px;
   padding-bottom: 20px;
-  scrollbar-width: thin;
 }

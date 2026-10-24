@@ -64,7 +64,6 @@
 
 .pr-title:hover {
   text-decoration: underline;
-  text-decoration-color: var(--text-faint);
 }
 
 .pr-due-done .pr-title {

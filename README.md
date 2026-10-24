@@ -20,6 +20,29 @@ Download `main.js`, `manifest.json`, and `styles.css` from the matching [GitHub 
 
 Keep your existing `data.json` when updating manually.
 
+## Privacy and vault access
+
+The plugin lists Markdown files with `vault.getMarkdownFiles()` at startup to find reminders throughout the vault. It reads notes through Obsidian's vault API and updates affected task lines when you add, edit, complete, or delete a task. This scan is necessary for vault-wide reminders, including notes that are not open. The plugin does not send note contents to external services.
+
+## Development and verified builds
+
+Use Node.js 24 and npm. There are no third-party build dependencies; the committed `package-lock.json` records this dependency-free build.
+
+```bash
+npm ci
+npm test
+npm run check
+```
+
+Edit `src/`, then run `npm run build` to regenerate `main.js` and `styles.css`. CI checks that the committed bundles match the sources byte-for-byte.
+
+The build workflow generates provenance attestations for `main.js`, `styles.css`, and `manifest.json` on pushes to `main` and on published releases. Release builds verify that the tag matches the version in `manifest.json`, then upload those exact files to the release. Use a new version/tag containing the workflow and fixes; existing release assets are not changed by a source commit.
+
+```bash
+gh attestation verify main.js --repo singhaf9270/obsidian-persian-reminder
+gh attestation verify styles.css --repo singhaf9270/obsidian-persian-reminder
+```
+
 ## Bug reports
 
 Please use this repository's Issues tab to report bugs. For mobile issues, include your device model, Obsidian version, and a screenshot when possible.

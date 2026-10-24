@@ -31,7 +31,7 @@
 /* Both badges occupy the same metadata row, with breathing room. */
 .pr-sidebar .pr-task-card .pr-card-meta, .pr-dashboard .pr-task-card .pr-card-meta {
   display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-start;
-  column-gap:8px; row-gap:8px; margin-top:8px;
+  gap:8px; margin-top:8px;
 }
 .pr-sidebar .pr-task-card .pr-card-meta > *, .pr-dashboard .pr-task-card .pr-card-meta > * { margin:0; }
 /* The inline date chip uses a readable ink even in dark themes. */

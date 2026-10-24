@@ -4,7 +4,7 @@
 .pr-task-card.pr-colored-task { background:linear-gradient(115deg,color-mix(in srgb,var(--pr-task-color) 13%,var(--background-primary)),color-mix(in srgb,var(--pr-task-color) 5%,var(--background-primary)));border-color:color-mix(in srgb,var(--pr-task-color) 28%,var(--background-modifier-border)); }
 .theme-dark .pr-task-card.pr-colored-task {background:linear-gradient(115deg,color-mix(in srgb,var(--pr-task-color) 16%,var(--background-primary)),color-mix(in srgb,var(--pr-task-color) 7%,var(--background-primary)));}
 .pr-inline-date,.pr-inline-date.pr-style-plain,.pr-inline-date.pr-style-soft,.pr-inline-date.pr-style-vivid{color:var(--pr-inline-text-color,#182e3a)}
-.pr-task-card .pr-card-main .pr-card-meta { display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;column-gap:8px;row-gap:7px;margin-top:8px;direction:rtl; }
+.pr-task-card .pr-card-main .pr-card-meta { display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:7px 8px;margin-top:8px;direction:rtl; }
 .pr-task-card .pr-card-meta .pr-card-date,.pr-task-card .pr-card-meta .pr-remaining{margin:0;flex:0 0 auto;}
 /* Allow Obsidian theme and third-party .tag rules to determine tag appearance. */
 .pr-task-card .pr-plain-tags .tag { color:var(--tag-color,var(--text-accent));background:var(--tag-background,var(--background-modifier-hover));border-color:var(--tag-border-color,transparent); }

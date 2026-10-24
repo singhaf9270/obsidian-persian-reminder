@@ -206,7 +206,6 @@
   padding: 16px;
   max-height: min(680px,calc(100dvh - 30px));
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .pr-modal-header {
@@ -480,7 +479,6 @@
   gap: 5px;
   overflow-x: auto;
   padding: 9px 0 6px;
-  scrollbar-width: none;
 }
 
 .pr-sidebar-tabs::-webkit-scrollbar {
@@ -516,7 +514,6 @@
   flex-direction: column;
   gap: 8px;
   padding-bottom: 20px;
-  scrollbar-width: thin;
 }
 
 /* SOURCE: src/styles/40-task-cards.css */
@@ -586,7 +583,6 @@
 
 .pr-title:hover {
   text-decoration: underline;
-  text-decoration-color: var(--text-faint);
 }
 
 .pr-due-done .pr-title {
@@ -695,7 +691,6 @@
   height: 100%;
   padding: 20px;
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .pr-dashboard-head {
@@ -806,7 +801,6 @@
   gap: 8px;
   max-height: 470px;
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .pr-pinned-section {
