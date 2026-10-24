@@ -1,0 +1,167 @@
+/* Task cards displayed in sidebar and dashboard */
+
+.pr-task-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-inline-start: 3px solid var(--pr-clock-color);
+  border-radius: 12px;
+  background: var(--background-secondary);
+}
+
+.pr-task-card.pr-due-soon:not(.pr-colored-task) {
+  border-inline-start-color: var(--pr-soon-color);
+}
+
+.pr-task-card.pr-due-overdue:not(.pr-colored-task) {
+  border-inline-start-color: var(--pr-overdue-color);
+}
+
+.pr-task-card.pr-colored-task {
+  border-inline-start-color: var(--pr-task-color);
+}
+
+.pr-task-card.pr-colored-task.pr-style-plain {
+  background: color-mix(in srgb,var(--pr-task-color) 12%,var(--background-secondary));
+}
+
+.pr-task-card.pr-colored-task.pr-style-soft {
+  background: linear-gradient(110deg,color-mix(in srgb,var(--pr-task-color) 16%,var(--background-secondary)),var(--background-secondary));
+}
+
+.pr-task-card.pr-colored-task.pr-style-vivid {
+  background: linear-gradient(115deg,color-mix(in srgb,var(--pr-task-color) 32%,var(--background-secondary)),color-mix(in srgb,var(--pr-task-color) 7%,var(--background-secondary)));
+}
+
+.pr-card-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.pr-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  line-height: 1.55;
+}
+
+.pr-check {
+  margin-top: 5px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.pr-title {
+  font-size: .99em;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.pr-title:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--text-faint);
+}
+
+.pr-due-done .pr-title {
+  color: var(--text-muted);
+}
+
+.pr-card-meta {
+  display: flex;
+  gap: 7px 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 7px;
+  font-size: .87em;
+}
+
+.pr-card-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 3px 5px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: inherit;
+}
+
+.pr-card-date:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.pr-due-soon .pr-card-date {
+  color: var(--pr-soon-color);
+}
+
+.pr-due-overdue .pr-card-date {
+  color: var(--pr-overdue-color);
+}
+
+.pr-location {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+/* Hashtags: no color, backgrounds, borders, or typography added by this plugin. */
+
+.pr-plain-tags {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.pr-note-path {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: .82em;
+  overflow-wrap: anywhere;
+}
+
+.pr-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pr-card-action {
+  width: 29px;
+  height: 29px;
+  padding: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.pr-card-action:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pr-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+  padding: 15px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .91em;
+}
+
+.pr-empty svg {
+  width: 27px;
+  height: 27px;
+  color: var(--pr-clock-color);
+}

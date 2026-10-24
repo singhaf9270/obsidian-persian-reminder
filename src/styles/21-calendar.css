@@ -1,0 +1,102 @@
+/* Jalali calendar and highlighted days with tasks */
+
+.pr-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 7px;
+}
+
+.pr-calendar-head strong {
+  flex: 1;
+  text-align: center;
+  font-size: .94em;
+}
+
+.pr-today {
+  font-size: .81em;
+  padding: 5px 7px;
+}
+
+.pr-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7,minmax(0,1fr));
+  gap: 4px;
+  direction: rtl;
+}
+
+.pr-weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  color: var(--text-muted);
+  font-size: .82em;
+}
+
+.pr-calendar-day,.pr-day-blank {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 32px;
+  border-radius: 9px;
+}
+
+.pr-calendar-day {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: .9em;
+  padding: 4px 0 7px;
+}
+
+.pr-calendar-day:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pr-calendar-day.is-today {
+  border-color: var(--pr-clock-color);
+  font-weight: 700;
+}
+
+.pr-calendar-day.has-tasks {
+  background: linear-gradient(145deg,color-mix(in srgb,var(--pr-clock-color) 20%,var(--background-primary)),color-mix(in srgb,var(--pr-clock-color) 5%,var(--background-primary)));
+  border-color: color-mix(in srgb,var(--pr-clock-color) 30%,transparent);
+  font-weight: 700;
+}
+
+.pr-calendar-day.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.pr-calendar-count {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 5px;
+  height: 5px;
+  border-radius: 12px;
+  background: var(--pr-clock-color);
+  color: var(--text-on-accent);
+  font-size: .64em;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.pr-calendar-count:not(:empty) {
+  height: 14px;
+  min-width: 14px;
+  padding: 1px 3px;
+  bottom: -4px;
+}
+
+.pr-calendar-day.is-selected .pr-calendar-count {
+  background: var(--text-on-accent);
+  color: var(--interactive-accent);
+}

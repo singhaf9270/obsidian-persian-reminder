@@ -1,0 +1,125 @@
+/* Persian Reminder 2.3.0: Material clock and PersianTasks-inspired theme; no font-family overrides and no hashtag coloring */
+
+.pr-root,.pr-modal,.pr-settings {
+  direction: rtl;
+  text-align: right;
+}
+
+.pr-root *,.pr-modal * {
+  box-sizing: border-box;
+}
+
+.pr-root button,.pr-modal button {
+  cursor: pointer;
+}
+
+.pr-root svg,.pr-modal svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.pr-muted,.pr-dashboard-head p,.pr-counter,.pr-note-path {
+  color: var(--text-muted);
+}
+
+.pr-icon,.pr-add,.pr-quiet-btn,.pr-card-action,.pr-inline-clock,.pr-inline-date,.pr-today,.pr-modal-tab,.pr-ampm,.pr-time-value,.pr-filter-chip,.pr-remove-filter,.pr-save-btn,.pr-cancel-btn,.pr-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 9px;
+  border: 1px solid var(--background-modifier-border);
+  padding: 7px 10px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: inherit;
+}
+
+.pr-icon {
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+  flex-shrink: 0;
+}
+
+.pr-add,.pr-save-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.pr-add:hover,.pr-save-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.pr-icon:hover,.pr-quiet-btn:hover,.pr-card-action:hover,.pr-filter-chip:hover,.pr-cancel-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.pr-danger-btn {
+  color: var(--text-error);
+  background: color-mix(in srgb,var(--text-error) 9%,transparent);
+}
+
+.pr-inline-clock,.pr-inline-date {
+  vertical-align: middle;
+  line-height: 1.5;
+  white-space: nowrap;
+  max-width: 100%;
+  border-color: transparent;
+}
+
+.pr-inline-clock {
+  color: var(--pr-clock-color,#159f9b);
+  padding: 3px 5px;
+  margin-inline: 6px 3px;
+  min-width: 26px;
+  height: 27px;
+  background: color-mix(in srgb,var(--pr-clock-color,#159f9b) 12%,transparent);
+}
+
+.pr-inline-clock:hover {
+  background: color-mix(in srgb,var(--pr-clock-color,#159f9b) 23%,transparent);
+}
+
+.pr-inline-date {
+  font-size: .91em;
+  font-weight: 600;
+  padding: 4px 10px;
+  margin-inline: 5px;
+  gap: 7px;
+  color: var(--pr-stamp-color,#4c8be8);
+  border: 1px solid color-mix(in srgb,var(--pr-stamp-color,#4c8be8) 28%,transparent);
+}
+
+.pr-inline-date svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pr-inline-date.pr-style-plain {
+  background: color-mix(in srgb,var(--pr-stamp-color,#4c8be8) 12%,var(--background-primary));
+}
+
+.pr-inline-date.pr-style-soft {
+  background: linear-gradient(115deg,color-mix(in srgb,var(--pr-stamp-color,#4c8be8) 18%,var(--background-primary)),var(--background-primary));
+}
+
+.pr-inline-date.pr-style-vivid {
+  background: linear-gradient(115deg,color-mix(in srgb,var(--pr-stamp-color,#4c8be8) 30%,var(--background-primary)),color-mix(in srgb,var(--pr-stamp-color,#4c8be8) 7%,var(--background-primary)));
+}
+
+.pr-inline-date.pr-due-soon {
+  color: var(--pr-soon-color);
+}
+
+.pr-inline-date.pr-due-overdue {
+  color: var(--pr-overdue-color);
+}
+
+.pr-inline-date:focus-visible,.pr-inline-clock:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}

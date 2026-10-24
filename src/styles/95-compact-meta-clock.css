@@ -1,0 +1,14 @@
+/* Dates and remaining time share a single row directly below the title. */
+.pr-task-card .pr-card-main .pr-card-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:6px 8px;margin-top:7px;direction:rtl;min-width:0}
+.pr-task-card .pr-card-meta .pr-card-date,.pr-task-card .pr-card-meta .pr-remaining{display:inline-flex;align-items:center;align-self:auto;justify-content:center;margin:0;flex:0 0 auto;max-width:100%;min-height:25px;padding:3px 10px;line-height:1.4;font-size:.82em;border-radius:999px;white-space:normal;text-align:center}
+.pr-task-card .pr-card-meta .pr-card-date{cursor:pointer}
+.pr-task-card .pr-card-meta .pr-location{margin:0}
+/* Smaller, quieter analog time picker without affecting dial hit testing. */
+.pr-modal .pr-material-clock{gap:8px;padding:4px 0}
+.pr-modal .pr-material-face{width:min(196px,65vw);height:min(196px,65vw);border-radius:50%;background:radial-gradient(circle at 35% 25%,color-mix(in srgb,var(--interactive-accent) 9%,var(--background-primary)),var(--background-secondary));box-shadow:inset 0 0 0 1px var(--background-modifier-border),0 5px 20px rgba(0,0,0,.09)}
+.pr-modal .pr-material-hour,.pr-modal .pr-material-minute{font-size:1.2em;min-width:40px;padding:4px 8px;border-radius:12px}
+.pr-modal .pr-material-now{padding:5px 9px;font-size:.85em}
+.pr-modal .pr-material-number{font-size:.84em}
+.pr-modal .pr-material-hand{stroke-width:3}
+.pr-modal .pr-material-knob{stroke-width:2}
+@media(max-width:380px){.pr-modal .pr-material-face{width:min(174px,60vw);height:min(174px,60vw)}}

@@ -1,0 +1,82 @@
+/* Responsive for mobile and narrow sidebars. */
+
+@media (max-width:950px) {
+  .pr-dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+  .pr-calendar-host {
+    max-width: 420px;
+  }
+}
+
+@media (max-width:670px) {
+  .pr-dashboard {
+    padding: 11px;
+  }
+  .pr-stats {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .pr-pinned-list {
+    grid-template-columns: 1fr;
+  }
+  .pr-dashboard-head h2 {
+    font-size: 1.2em;
+  }
+  .pr-dashboard-day,.pr-dashboard-calendar,.pr-pinned-section {
+    padding: 12px;
+  }
+  .pr-filter-form {
+    grid-template-columns: 100px 1fr;
+  }
+  .pr-filter-form>.pr-add {
+    grid-column: 1/-1;
+  }
+  .pr-modal .modal-content {
+    padding: 12px;
+  }
+  .pr-clock-face {
+    width: 188px;
+    height: 188px;
+  }
+}
+
+@media (max-width:390px) {
+  .pr-modal {
+    width: calc(100vw - 10px);
+  }
+  .pr-modal .modal-content {
+    padding: 10px;
+  }
+  .pr-dashboard-head {
+    flex-wrap: wrap;
+  }
+  .pr-sidebar {
+    padding: 9px 7px;
+  }
+  .pr-calendar-day {
+    min-height: 30px;
+  }
+  .pr-card-actions {
+    gap: 0;
+  }
+  .pr-clock-face {
+    width: 175px;
+    height: 175px;
+  }
+}
+
+@media (hover:none) {
+  .pr-card-action,.pr-icon,.pr-calendar-day {
+    min-height: 32px;
+  }
+  .pr-inline-clock {
+    min-width: 29px;
+    min-height: 29px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .pr-root *,.pr-modal * {
+    transition: none;
+  }
+}

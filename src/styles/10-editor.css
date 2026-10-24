@@ -1,0 +1,39 @@
+/* Editor: color a whole task line, never the hashtag token itself. */
+
+.cm-line.pr-task-highlight {
+  border-radius: 8px;
+  box-shadow: inset 3px 0 var(--pr-task-color);
+  padding-inline: 8px 4px;
+}
+
+.cm-line.pr-task-highlight.pr-style-plain {
+  background: color-mix(in srgb,var(--pr-task-color) 10%,var(--background-primary));
+}
+
+.cm-line.pr-task-highlight.pr-style-soft {
+  background: linear-gradient(100deg,color-mix(in srgb,var(--pr-task-color) 4%,var(--background-primary)),color-mix(in srgb,var(--pr-task-color) 14%,var(--background-primary)));
+}
+
+.cm-line.pr-task-highlight.pr-style-vivid {
+  background: linear-gradient(100deg,color-mix(in srgb,var(--pr-task-color) 8%,var(--background-primary)),color-mix(in srgb,var(--pr-task-color) 25%,var(--background-primary)));
+}
+
+/* Reading mode: only background/border on li. Other plugins remain free to style tags. */
+
+.markdown-preview-view li.pr-colored-task {
+  border-radius: 8px;
+  padding: 6px 10px;
+  border-inline-start: 3px solid var(--pr-task-color);
+}
+
+.markdown-preview-view li.pr-colored-task.pr-style-plain {
+  background: color-mix(in srgb,var(--pr-task-color) 10%,transparent);
+}
+
+.markdown-preview-view li.pr-colored-task.pr-style-soft {
+  background: linear-gradient(110deg,transparent,color-mix(in srgb,var(--pr-task-color) 15%,transparent));
+}
+
+.markdown-preview-view li.pr-colored-task.pr-style-vivid {
+  background: linear-gradient(110deg,color-mix(in srgb,var(--pr-task-color) 7%,transparent),color-mix(in srgb,var(--pr-task-color) 26%,transparent));
+}

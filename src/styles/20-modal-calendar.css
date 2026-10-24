@@ -1,0 +1,134 @@
+/* Compact modal with tabs: only date OR clock is visible. */
+
+.pr-modal {
+  width: min(390px,calc(100vw - 16px));
+  max-width: 100%;
+}
+
+.pr-modal .modal-content {
+  padding: 16px;
+  max-height: min(680px,calc(100dvh - 30px));
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.pr-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
+  font-size: 1.06em;
+}
+
+.pr-modal-header>span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 11px;
+  color: var(--pr-clock-color);
+  background: color-mix(in srgb,var(--pr-clock-color) 12%,transparent);
+}
+
+.pr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.pr-field>span {
+  font-size: .9em;
+  font-weight: 600;
+}
+
+.pr-input,.pr-select {
+  min-height: 39px;
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 9px;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: .94em;
+}
+
+.pr-input:focus,.pr-select:focus {
+  border-color: var(--interactive-accent);
+  outline: 0;
+}
+
+.pr-modal-tabs {
+  display: flex;
+  gap: 5px;
+  padding: 4px;
+  border-radius: 11px;
+  background: var(--background-secondary);
+  margin: 10px 0;
+}
+
+.pr-modal-tab {
+  flex: 1;
+  min-height: 35px;
+  border: 0;
+  background: transparent;
+  font-size: .94em;
+}
+
+.pr-modal-tab.is-active {
+  background: var(--background-primary);
+  color: var(--text-accent);
+  box-shadow: 0 1px 6px #00000012;
+  font-weight: 650;
+}
+
+.pr-picker-panel {
+  min-height: 270px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.pr-details {
+  margin: 9px 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 9px;
+  padding: 7px 10px;
+}
+
+.pr-details summary {
+  cursor: pointer;
+  font-size: .91em;
+  color: var(--text-muted);
+}
+
+.pr-detail-fields {
+  padding-top: 10px;
+}
+
+.pr-selected-datetime {
+  padding: 8px 10px;
+  text-align: center;
+  border-radius: 9px;
+  background: color-mix(in srgb,var(--pr-stamp-color) 10%,var(--background-secondary));
+  font-size: .96em;
+  font-weight: 650;
+}
+
+.pr-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.pr-spacer {
+  flex: 1;
+}
+
+.pr-modal-actions button {
+  font-size: .87em;
+}

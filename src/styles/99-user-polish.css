@@ -1,0 +1,48 @@
+/* Subtle accent for ordinary cards; explicit hashtag colors remain stronger. */
+.pr-task-card:not(.pr-colored-task) {
+  background: linear-gradient(115deg,
+    color-mix(in srgb,var(--pr-accent-color,#a78bfa) 8%,var(--background-secondary)),
+    color-mix(in srgb,var(--pr-accent-color,#a78bfa) 3%,var(--background-secondary)));
+  border-color: color-mix(in srgb,var(--pr-accent-color,#a78bfa) 19%,var(--background-modifier-border));
+}
+.pr-task-card.pr-colored-task.pr-style-plain {background:color-mix(in srgb,var(--pr-task-color) 11%,var(--background-secondary));}
+.pr-task-card.pr-colored-task.pr-style-soft {background:linear-gradient(115deg,color-mix(in srgb,var(--pr-task-color) 13%,var(--background-secondary)),color-mix(in srgb,var(--pr-task-color) 4%,var(--background-secondary)));}
+.pr-task-card.pr-colored-task.pr-style-vivid {background:linear-gradient(115deg,color-mix(in srgb,var(--pr-task-color) 20%,var(--background-secondary)),color-mix(in srgb,var(--pr-task-color) 7%,var(--background-secondary)));}
+.pr-task-card .pr-card-meta {gap:8px 10px;}
+.pr-task-card .pr-card-meta .pr-card-date,.pr-task-card .pr-card-meta .pr-remaining {margin:0;}
+/* Let themes and tag-focused plugins style Obsidian's native .tag class. */
+.pr-task-card .pr-plain-tags .tag {text-decoration:none;cursor:default;}
+.pr-inline-date,.pr-inline-date.pr-style-plain,.pr-inline-date.pr-style-soft,.pr-inline-date.pr-style-vivid {color:var(--pr-inline-text-color,#182e3a);}
+
+/* 2.3.0 fix: unified accent tint in sidebar and dashboard, including tagged cards. */
+.pr-sidebar .pr-task-card, .pr-dashboard .pr-task-card {
+  --pr-card-tint: var(--pr-task-color, var(--pr-accent-color, #a78bfa));
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--pr-card-tint) 10%, var(--background-secondary)),
+    color-mix(in srgb, var(--pr-card-tint) 4%, var(--background-secondary))) ;
+  border-color: color-mix(in srgb, var(--pr-card-tint) 23%, var(--background-modifier-border));
+  border-inline-start: 3px solid color-mix(in srgb, var(--pr-card-tint) 55%, var(--background-modifier-border));
+}
+.theme-dark .pr-sidebar .pr-task-card, .theme-dark .pr-dashboard .pr-task-card {
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--pr-card-tint) 13%, var(--background-secondary)),
+    color-mix(in srgb, var(--pr-card-tint) 5%, var(--background-secondary)));
+}
+/* Both badges occupy the same metadata row, with breathing room. */
+.pr-sidebar .pr-task-card .pr-card-meta, .pr-dashboard .pr-task-card .pr-card-meta {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-start;
+  column-gap:8px; row-gap:8px; margin-top:8px;
+}
+.pr-sidebar .pr-task-card .pr-card-meta > *, .pr-dashboard .pr-task-card .pr-card-meta > * { margin:0; }
+/* The inline date chip uses a readable ink even in dark themes. */
+body.theme-dark .pr-inline-date, body.theme-dark .pr-inline-date.pr-style-plain,
+body.theme-dark .pr-inline-date.pr-style-soft, body.theme-dark .pr-inline-date.pr-style-vivid {
+  color: var(--pr-inline-text-color, #182e3a);
+}
+/* Native tag style: do not set tag foreground/background/border. */
+.pr-sidebar .pr-plain-tags .tag, .pr-dashboard .pr-plain-tags .tag {
+  color: var(--tag-color, var(--text-accent));
+  background-color: var(--tag-background, transparent);
+  border-color: var(--tag-border-color, transparent);
+  border-radius: var(--tag-radius, 999px);
+}

@@ -1,0 +1,19 @@
+/* Persian Reminder — Modern soft-gradient visual refresh */
+.pr-task-card {border-radius:17px;border:1px solid var(--background-modifier-border);background:var(--background-primary);box-shadow:0 4px 18px rgba(30,45,70,.045);padding:12px;transition:box-shadow .18s ease,border-color .18s ease}
+.pr-task-card:hover {box-shadow:0 7px 24px rgba(30,45,70,.09)}
+.pr-task-card.pr-colored-task {border:1px solid color-mix(in srgb,var(--pr-task-color) 33%,var(--background-modifier-border));border-inline-start:3px solid var(--pr-task-color);background:linear-gradient(125deg,color-mix(in srgb,var(--pr-task-color) 20%,var(--background-primary)),color-mix(in srgb,var(--pr-task-color) 6%,var(--background-primary)) 75%,var(--background-primary));box-shadow:0 5px 22px color-mix(in srgb,var(--pr-task-color) 9%,transparent)}
+.pr-card-heading {gap:8px;align-items:center}.pr-title {font-weight:650;line-height:1.7}
+.pr-card-meta {display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pr-card-date {border-radius:10px;padding:4px 8px;font-size:.83em}
+.pr-remaining-inline {display:inline-flex;align-items:center;font-size:.75em;border-radius:9px;padding:4px 8px;background:color-mix(in srgb,var(--interactive-accent) 8%,var(--background-primary));border:1px solid var(--background-modifier-border);white-space:nowrap}
+.pr-remaining-inline.is-overdue {color:var(--text-error);background:color-mix(in srgb,var(--text-error) 9%,var(--background-primary))}
+.pr-has-time .pr-card-date {box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--interactive-accent) 35%,transparent);font-weight:650}
+.pr-material-face {width:min(172px,56vw);height:min(172px,56vw);border-radius:50%;box-shadow:0 5px 22px rgba(30,45,70,.09)}
+.pr-material-hour,.pr-material-minute {font-size:1.05em;min-width:36px;border-radius:10px}
+.pr-swatch-grid {grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.pr-swatch {border-radius:17px;padding:10px;gap:8px}
+.pr-swatch-circle {width:100%;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.pr-swatch-preview {display:flex;align-items:center;justify-content:space-between;width:76%;height:28px;padding:0 9px;border-radius:9px;background:rgba(255,255,255,.74);color:#334155;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.pr-swatch.is-active {border-color:var(--interactive-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--interactive-accent) 18%,transparent)}
+.pr-modal-tabs {flex-wrap:wrap}.pr-no-time {font-size:.85em}
+.pr-dashboard .pr-task-card,.pr-sidebar .pr-task-card {margin-bottom:8px}

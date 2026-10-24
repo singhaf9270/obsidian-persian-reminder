@@ -1,0 +1,61 @@
+/* Text stays readable at the host theme's default font size. */
+
+.pr-sidebar-tab,.pr-counter,.pr-note-path,.pr-filter-chip {
+  font-size: .94em;
+}
+
+.pr-title {
+  font-size: 1.04em;
+  line-height: 1.65;
+}
+
+.pr-card-meta {
+  font-size: .96em;
+}
+
+.pr-plain-tags {
+  font-size: inherit;
+}
+
+.pr-card-date {
+  font-size: .96em;
+}
+
+.pr-inline-date {
+  font-size: .98em;
+  padding: 6px 12px;
+  line-height: 1.6;
+}
+
+.pr-remaining {
+  font-size: .92em;
+  padding: 6px 12px;
+}
+
+.pr-material-instructions {
+  font-size: .92em;
+}
+
+.pr-root .pr-add,.pr-root .pr-quiet-btn {
+  font-size: .96em;
+}
+
+@media (max-width:670px) {
+  .pr-card-actions {
+    flex-direction: row;
+    gap: 3px;
+  }
+  .pr-task-card {
+    flex-wrap: wrap;
+  }
+  .pr-card-main {
+    min-width: 0;
+    flex-basis: calc(100% - 65px);
+  }
+  .pr-dashboard-columns {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .pr-material-actions button {
+    min-height: 38px;
+  }
+}
