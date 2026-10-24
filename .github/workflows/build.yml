@@ -31,7 +31,8 @@ jobs:
         if: github.event_name == 'release'
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: node -e 'const m = require("./manifest.json"); if (process.env.RELEASE_TAG !== m.version) throw new Error("Release tag must match manifest version: " + m.version)'
+        run: |
+          node -e 'const m = require("./manifest.json"); if (process.env.RELEASE_TAG !== m.version) throw new Error("Release tag must match manifest version: " + m.version)'
 
   attest:
     needs: verify
