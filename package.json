@@ -1,7 +1,7 @@
 {
   "name": "persian-reminder-source",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:vault": "PR_OUT_DIR=\"/Volumes/هارد جدید/Obsidian vault/.obsidian/plugins/persian-reminder\" node scripts/build.mjs",

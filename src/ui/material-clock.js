@@ -180,8 +180,22 @@ class MaterialClock {
         this[this.phase] = next;
         this.sync();
     }
+    readInputs() {
+        const values = [this.hourInput, this.minuteInput].map(input => {
+            const text = en(this.p, input.value.trim());
+            return /^\d{1,2}$/.test(text) ? Number(text) : NaN;
+        });
+        for (let i = 0; i < values.length; i++) {
+            if (!Number.isInteger(values[i]) || values[i] > (i ? 59 : 23)) {
+                (i ? this.minuteInput : this.hourInput).focus();
+                return false;
+            }
+        }
+        [this.hour, this.minute] = values;
+        return true;
+    }
     accept() {
-        // Only this callback commits pending time changes to TaskModal.
+        if (!this.readInputs()) return;
         this.confirm(this.hour, this.minute);
     }
     renderNumbers() {

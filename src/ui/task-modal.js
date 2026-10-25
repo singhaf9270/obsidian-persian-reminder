@@ -111,7 +111,11 @@ class TaskModal extends Modal {
             this.pathInput.setAttribute('aria-invalid', 'true');
         }
     }
-    switchTab(tab) {
+    switchTab(tab, discardTime = false) {
+        if (this.timePicker && !discardTime) {
+            this.hour = this.timePicker.hour;
+            this.minute = this.timePicker.minute;
+        }
         this.timePicker?.destroy();
         this.timePicker = null;
         this.tab = tab;
@@ -131,7 +135,7 @@ class TaskModal extends Modal {
             this.minute = minute;
             this.updateSummary();
             this.switchTab('date');
-        }, () => this.switchTab('date'));
+        }, () => this.switchTab('date', true));
     }
     onClose() {
         this.stopWatching?.();
@@ -153,6 +157,12 @@ class TaskModal extends Modal {
         if (this.saving) return;
         const title = this.titleInput.value.trim();
         if (!title) { new Notice('عنوان کار را وارد کنید'); this.titleInput.focus(); return; }
+        // The main Save action also commits the currently open clock.
+        if (this.timePicker) {
+            if (!this.timePicker.readInputs()) return;
+            this.hour = this.timePicker.hour;
+            this.minute = this.timePicker.minute;
+        }
         const day = new Date(this.date);
         day.setHours(this.hour, this.minute, 0, 0);
         if (day.getHours() !== this.hour || day.getMinutes() !== this.minute) {

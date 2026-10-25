@@ -1,3 +1,9 @@
+## 1.0.5
+
+- Save pending clock changes when using the main Save button; keep explicit clock cancellation.
+- Read and validate manually typed Persian/English hours and minutes before saving.
+- Add a donation link in settings and the plugin manifest.
+
 ## 1.0.4
 
 - Schedule the next reminder deadline directly, with a watchdog and rescans after resume or delayed Persian Calendar startup.

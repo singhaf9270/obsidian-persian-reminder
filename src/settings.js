@@ -28,6 +28,13 @@ class SettingsTab extends PluginSettingTab {
         ]) this.navButtons.set(key, B(navigation, title, icon, 'pr-settings-nav-button', () => this.showPage(key)));
         this.pageEl = E(root, 'div', 'pr-settings-page');
         this.showPage(this.page);
+        const support = E(root, 'div', 'pr-setting-section');
+        I(support, 'heart');
+        E(support, 'p', '', 'با حمایت شما، توسعه و بهبود افزونه ادامه پیدا می‌کند.');
+        const donate = E(support, 'a', 'pr-save-btn', 'حمایت مالی از توسعه‌دهنده');
+        donate.href = 'https://reymit.ir/singhaf9270';
+        donate.target = '_blank';
+        donate.rel = 'noopener noreferrer';
     }
     showPage(page) {
         this.page = page;

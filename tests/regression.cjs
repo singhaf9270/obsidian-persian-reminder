@@ -115,6 +115,33 @@ assert.equal(insertDailyTask(frontmatter, line, '## Reminders'), frontmatter + '
     const dailyModal = new TaskModal(p, null, new Date(2026, 9, 29));
     assert.equal(dailyModal.useDaily, true);
     assert.equal(dailyModal.date.getDate(), 29);
+    // Save directly from the clock tab, including text not yet blurred.
+    const { parseTask } = Plugin.testRequire('src/core/tasks.js');
+    const { MaterialClock } = Plugin.testRequire('src/ui/material-clock.js');
+    const raw = '- [ ] کتاب (@j:1405-08-12 00:31)';
+    p.api = () => ({
+        jalaliToDate: (y, m, d) => new Date(2026, 10, d - 10),
+        gregorianToJalali: (y, m, d) => ({ jy: 1405, jm: 8, jd: d + 10 })
+    });
+    p.settings.dateFormat = 'jalali';
+    notes.set('Book.md', 'Before\n' + raw + '\nAfter');
+    const edit = new TaskModal(p, { ...parseTask(p, raw), path: 'Book.md', line: 1 });
+    edit.titleInput = { value: 'کتاب' }; edit.tagsInput = { value: '' }; edit.placeInput = { value: '' };
+    edit.date = new Date(2026, 10, 3);
+    const clock = Object.create(MaterialClock.prototype);
+    clock.p = p; clock.hour = 0; clock.minute = 31;
+    clock.hourInput = { value: '۱۴', focus() {} }; clock.minuteInput = { value: '۴۵', focus() {} };
+    edit.timePicker = clock; edit.close = () => {};
+    await edit.save();
+    assert.equal(notes.get('Book.md'), 'Before\n- [ ] کتاب (@j:1405-08-13 14:45)\nAfter');
+    clock.hourInput.value = '25';
+    assert.equal(clock.readInputs(), false);
+    // Open editor text is updated too, while keeping unrelated unsaved text.
+    view.file = new TFile('Book.md'); unsaved = 'UNSAVED\n' + raw + '\nAfter';
+    view.editor.getLine = line => unsaved.split('\n')[line];
+    assert.equal(await p.change({ path: 'Book.md', line: 1, raw }, old => old.replace('00:31', '16:20')), true);
+    assert.equal(unsaved, 'UNSAVED\n- [ ] کتاب (@j:1405-08-12 16:20)\nAfter');
+    p.settings.dateFormat = 'gregorian';
     // A selected Templater template is fully rendered before the task is inserted.
     p.settings.dailyUseTemplater = true;
     p.settings.dailyTemplatePath = 'Templates/Daily.md';
