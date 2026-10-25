@@ -327,6 +327,7 @@ module.exports = class PersianReminder extends Plugin {
     }
 };
 
+
 },
 "src/core/constants.js": function(module, exports, require) {
 // Plugin identifiers, task syntax, palettes and default settings.
@@ -390,6 +391,7 @@ const DEFAULTS = {
 };
 
 module.exports = { SIDE, DASH, TASK, STAMP, OLD, PLACE, TAG, PALETTES, DEFAULTS };
+
 
 },
 "src/core/tasks.js": function(module, exports, require) {
@@ -501,6 +503,7 @@ function paintTask(p, el, item) { const color = tagColor(p, item); if (color) {
 } el.classList.add('pr-style-' + p.settings.taskStyle); }
 module.exports = { cssColor, parseTask, buildTask, updateTaskPreservingText, status, tagColor, paintTask };
 
+
 },
 "src/core/dates.js": function(module, exports, require) {
 // Date conversions are delegated to the persian-calendar plugin API.
@@ -520,6 +523,7 @@ function dateFa(p, d) { const j = jalali(p, d); return j ? fa(p, `${j.jy}/${pad(
 function clockFa(p, d) { return fa(p, `${pad(d.getHours())}:${pad(d.getMinutes())}`); }
 function monthDays(p, y, m) { const first = fromJ(p, y, m, 1), next = m === 12 ? fromJ(p, y + 1, 1, 1) : fromJ(p, y, m + 1, 1); return first && next ? Math.round((Date.UTC(next.getFullYear(), next.getMonth(), next.getDate()) - Date.UTC(first.getFullYear(), first.getMonth(), first.getDate())) / 86400000) : 30; }
 module.exports = { pad, iso, dateKey, localDateKey, fromISO, fa, en, jalali, fromJ, dateFa, clockFa, monthDays };
+
 },
 "src/shared/dom.js": function(module, exports, require) {
 // DOM helpers shared by every Obsidian UI view.
@@ -533,6 +537,7 @@ function B(parent, label, glyph, cls, fn) { const b = E(parent, 'button', cls); 
     E(b, 'span', '', label); if (fn)
     b.addEventListener('click', fn); return b; }
 module.exports = { E, I, B };
+
 
 },
 "src/core/daily-notes.js": function(module, exports, require) {
@@ -677,6 +682,7 @@ async function withNoteWrite(p, target, write) {
 }
 module.exports.withNoteWrite = withNoteWrite;
 
+
 },
 "src/editor/widgets.js": function(module, exports, require) {
 // Live Preview widgets and colored-task line decorations.
@@ -751,6 +757,7 @@ function editorExtension(p) {
     }, { decorations: v => v.decorations });
 }
 module.exports = { refreshEffect, editorExtension };
+
 
 },
 "src/ui/task-modal.js": function(module, exports, require) {
@@ -943,6 +950,7 @@ class TaskModal extends Modal {
 }
 module.exports = { TaskModal };
 
+
 },
 "src/ui/calendar.js": function(module, exports, require) {
 // Compact Jalali calendar and dashboard date-count markers.
@@ -1005,6 +1013,7 @@ class Calendar {
     }
 }
 module.exports = { Calendar };
+
 
 },
 "src/ui/material-clock.js": function(module, exports, require) {
@@ -1266,6 +1275,7 @@ class MaterialClock {
 }
 module.exports = { MaterialClock };
 
+
 },
 "src/ui/keyboard-viewport.js": function(module, exports, require) {
 const { Platform } = require('obsidian');
@@ -1334,6 +1344,7 @@ function watchKeyboard(modal, scroller) {
     };
 }
 module.exports = { watchKeyboard };
+
 
 },
 "src/ui/reminder-alert.js": function(module, exports, require) {
@@ -1446,6 +1457,7 @@ class ReminderAlert extends Modal {
 }
 module.exports = { ReminderAlert };
 
+
 },
 "src/core/reminders.js": function(module, exports, require) {
 const { fromISO } = require("src/core/dates.js");
@@ -1516,6 +1528,7 @@ class ReminderScheduler {
 }
 module.exports = { reminderKey, pendingReminders, ReminderScheduler };
 
+
 },
 "src/core/appearance.js": function(module, exports, require) {
 const { DEFAULTS } = require("src/core/constants.js");
@@ -1578,6 +1591,7 @@ function paintRemaining(p, element, item, now) {
     return info;
 }
 module.exports = { gradientAngle, cardTint, contrastText, remainingInfo, paintRemaining };
+
 
 },
 "src/views/sidebar.js": function(module, exports, require) {
@@ -1660,6 +1674,7 @@ class Sidebar extends ItemView {
 }
 module.exports = { Sidebar };
 
+
 },
 "src/ui/task-card.js": function(module, exports, require) {
 // Task cards shared by sidebar/dashboard + remaining-time badges.
@@ -1709,6 +1724,7 @@ function taskCard(p, parent, item, compact = false) {
     return box;
 }
 module.exports = { empty, taskCard };
+
 
 },
 "src/ui/view-parts.js": function(module, exports, require) {
@@ -1833,6 +1849,7 @@ function matchesQuery(item, query) {
     return !text || [item.title, item.place, item.path, ...item.tags].join(' ').toLocaleLowerCase().includes(text);
 }
 module.exports = { panelHeader, stats, dayPicker, searchField, matchesQuery };
+
 
 },
 "src/views/dashboard.js": function(module, exports, require) {
@@ -1959,6 +1976,7 @@ class Dashboard extends ItemView {
 }
 module.exports = { Dashboard };
 
+
 },
 "src/settings.js": function(module, exports, require) {
 const { PluginSettingTab, Setting, Notice } = require('obsidian');
@@ -1991,13 +2009,7 @@ class SettingsTab extends PluginSettingTab {
         ]) this.navButtons.set(key, B(navigation, title, icon, 'pr-settings-nav-button', () => this.showPage(key)));
         this.pageEl = E(root, 'div', 'pr-settings-page');
         this.showPage(this.page);
-        const support = E(root, 'div', 'pr-setting-section');
-        I(support, 'heart');
-        E(support, 'p', '', 'با حمایت شما، توسعه و بهبود افزونه ادامه پیدا می‌کند.');
-        const donate = E(support, 'a', 'pr-save-btn', 'حمایت مالی از توسعه‌دهنده');
-        donate.href = 'https://reymit.ir/singhaf9270';
-        donate.target = '_blank';
-        donate.rel = 'noopener noreferrer';
+        renderCreatorSupport(root, 'fa');
     }
     showPage(page) {
         this.page = page;
@@ -2350,6 +2362,60 @@ class SettingsTab extends PluginSettingTab {
     }
 }
 module.exports = { SettingsTab };
+
+
+
+// Shared settings footer: local styling, no requests until a link is opened.
+function renderCreatorSupport(container, language) {
+  function element(parent, tag, options = {}) {
+    const node = parent.ownerDocument.createElement(tag);
+    if (options.cls) node.className = options.cls;
+    if (options.text !== undefined) node.textContent = options.text;
+    if (options.href) node.setAttribute('href', options.href);
+    for (const [key, value] of Object.entries(options.attr || {})) node.setAttribute(key, value);
+    parent.appendChild(node);
+    return node;
+  }
+  const fa = language === 'fa';
+  const root = element(container, 'section', { cls: 'ot-support', attr: { dir: fa ? 'rtl' : 'ltr', 'aria-label': fa ? 'ارتباط با ما و حمایت' : 'Connect and support' } });
+  element(root, 'style', { text: `
+    .ot-support{margin-block:28px 12px;padding:20px;border:1px solid var(--background-modifier-border);border-radius:18px;background:var(--background-secondary);color:var(--text-normal)}
+    .ot-support h3{margin:0 0 8px;font-size:1.1em;color:var(--text-normal)}
+    .ot-support p{margin:0 0 18px;color:var(--text-muted);line-height:1.8}
+    .ot-support .ot-support-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+    .ot-support a.ot-support-card{display:flex;align-items:center;gap:12px;min-width:0;min-height:80px;padding:14px;border:1px solid var(--background-modifier-border);border-inline-start:4px solid var(--ot-brand);border-radius:12px;background:var(--background-primary);color:var(--text-normal);text-decoration:none;box-shadow:0 3px 12px rgba(0,0,0,.035)}
+    .ot-support .ot-support-icon{display:flex;align-items:center;justify-content:center;flex:0 0 40px;height:40px;border-radius:12px;background:var(--background-secondary);color:var(--ot-brand)}
+    .ot-support .ot-support-icon svg{width:23px;height:23px}
+    .ot-support .ot-support-info{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+    .ot-support .ot-support-label{font-weight:600;line-height:1.5}
+    .ot-support .ot-support-detail{font-size:.8em;color:var(--text-muted);overflow-wrap:anywhere}
+    .ot-support .ot-support-action{font-size:.8em;color:var(--text-muted);flex-shrink:0}
+    .ot-support a.ot-support-donate{background:linear-gradient(125deg,var(--background-primary),var(--background-secondary));border-color:var(--background-modifier-border);border-inline-start-color:var(--ot-brand)}
+    .ot-support .ot-support-donate .ot-support-action{padding:7px 10px;border-radius:8px;background:var(--interactive-accent);color:var(--text-on-accent)}
+    .ot-support a.ot-support-card:focus-visible{outline:2px solid var(--interactive-accent);outline-offset:3px}
+  ` });
+  element(root, 'h3', { text: fa ? 'ارتباط با ما' : 'Connect with us' });
+  element(root, 'p', { text: fa ? 'آموزش‌ها، تازه‌ها و پشتیبانی؛ همراه شما در دنیای ابسیدین.' : 'Tutorials, updates and support for your Obsidian journey.' });
+  const grid = element(root, 'div', { cls: 'ot-support-grid' });
+  const links = [
+    ['bale', 'message-circle', '#22a06b', fa ? 'کانال بله' : 'Bale Channel', 'https://ble.ir/obsidiantut'],
+    ['telegram', 'send', '#229ed9', fa ? 'کانال تلگرام' : 'Telegram Channel', 'https://t.me/obsidiantut'],
+    ['youtube', 'youtube', '#e5484d', fa ? 'کانال یوتیوب' : 'YouTube Channel', 'https://youtube.com/@obsidiantut'],
+    ['donate', 'heart', '#b879cd', fa ? 'حمایت از توسعهٔ افزونه‌ها' : 'Support plugin development', 'https://reymit.ir/singhaf9270']
+  ];
+  for (const [id, icon, color, label, url] of links) {
+    const donate = id === 'donate';
+    const card = element(grid, 'a', { cls: 'ot-support-card' + (donate ? ' ot-support-donate' : ''), href: url, attr: { target: '_blank', rel: 'noopener noreferrer', 'aria-label': label } });
+    card.style.setProperty('--ot-brand', color);
+    const iconEl = element(card, 'span', { cls: 'ot-support-icon', attr: { 'aria-hidden': 'true' } });
+    require('obsidian').setIcon(iconEl, icon);
+    const info = element(card, 'span', { cls: 'ot-support-info' });
+    element(info, 'span', { cls: 'ot-support-label', text: label });
+    const detail = element(info, 'span', { cls: 'ot-support-detail', text: donate ? (fa ? 'با همراهی شما، بهتر می‌سازیم.' : 'Your support keeps us building.') : '@obsidiantut' });
+    if (!donate) detail.setAttribute('dir', 'ltr');
+    element(card, 'span', { cls: 'ot-support-action', text: donate ? (fa ? 'حمایت مالی' : 'Donate') : (fa ? 'عضویت ↗' : 'Join ↗') });
+  }
+}
 
 }
 };
