@@ -42,6 +42,7 @@ const win = new EventTarget(); win.visualViewport = new EventTarget();
 win.visualViewport.height = 844; win.visualViewport.offsetTop = 0;
 Object.assign(win, { innerHeight: 844, setTimeout, clearTimeout, requestAnimationFrame: fn => setTimeout(fn, 0), cancelAnimationFrame: clearTimeout, matchMedia: () => ({ matches: true }) });
 const document = { defaultView: win, activeElement: null, hidden: false, createElement(tag) { return new Element(tag, this); } };
+document.createElementNS = function(namespace, tag) { return new Element(tag, this); };
 document.body = document.createElement('body');
 const settingRows = [];
 class Setting {
@@ -109,6 +110,13 @@ const row = name => [...settingRows].reverse().find(row => row.nameEl.textConten
 (async () => {
     p.applyTheme();
     const settings = new SettingsTab(p.app, p); settings.display();
+    const channels = settings.containerEl.querySelector('.ot-channel-grid');
+    assert.equal(channels.children.length, 3);
+    assert.equal(channels.querySelectorAll('a').length, 3);
+    const donation = settings.containerEl.querySelector('.ot-donation');
+    assert(!channels.contains(donation));
+    assert.equal(donation.querySelector('a').getAttribute('href'), 'https://reymit.ir/singhaf9270');
+    assert.equal(channels.children[2].querySelector('svg').children[1].getAttribute('fill'), '#fff');
     for (const page of ['general', 'daily', 'appearance', 'tags']) settings.showPage(page);
     settings.showPage('appearance');
     const angle = row('زاویهٔ گرادیانت').controlEl.querySelector('input'); angle.value = 250; await angle.fire('change');
@@ -147,3 +155,4 @@ const row = name => [...settingRows].reverse().find(row => row.nameEl.textConten
     p.alertModal.close(); assert.equal(p.alertModal, null);
     console.log('OK: compiled settings controls, template filtering/selection, gradient live updates, remaining rules, shared card surface, all-active sidebar and compact mobile alert queue.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
+
