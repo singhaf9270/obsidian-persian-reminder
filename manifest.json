@@ -1,7 +1,7 @@
 {
   "id": "persian-reminder",
   "name": "Persian Reminder",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "minAppVersion": "1.5.0",
   "description": "Persian task reminders with Jalali calendar, Material time picker, colored task backgrounds, sidebar and dashboard.",
   "isDesktopOnly": false,

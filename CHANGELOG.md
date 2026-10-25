@@ -1,3 +1,16 @@
+## Persian Reminder 1.0.6
+
+- Redesigned the settings footer with matching Bale, Telegram and YouTube cards.
+- Added a donation card linking to the developer's Reymit support page.
+- Supports light/dark themes, narrow screens and keyboard focus.
+- Persian interface preserved.
+
+### فارسی
+
+- طراحی یکپارچهٔ بخش ارتباط با ما در انتهای تنظیمات.
+- افزودن کارت حمایت مالی با لینک ریمیت.
+- سازگار با تم روشن و تاریک و صفحه‌های کوچک.
+
 ## 1.0.5
 
 - Save pending clock changes when using the main Save button; keep explicit clock cancellation.
