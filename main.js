@@ -327,7 +327,6 @@ module.exports = class PersianReminder extends Plugin {
     }
 };
 
-
 },
 "src/core/constants.js": function(module, exports, require) {
 // Plugin identifiers, task syntax, palettes and default settings.
@@ -391,7 +390,6 @@ const DEFAULTS = {
 };
 
 module.exports = { SIDE, DASH, TASK, STAMP, OLD, PLACE, TAG, PALETTES, DEFAULTS };
-
 
 },
 "src/core/tasks.js": function(module, exports, require) {
@@ -503,7 +501,6 @@ function paintTask(p, el, item) { const color = tagColor(p, item); if (color) {
 } el.classList.add('pr-style-' + p.settings.taskStyle); }
 module.exports = { cssColor, parseTask, buildTask, updateTaskPreservingText, status, tagColor, paintTask };
 
-
 },
 "src/core/dates.js": function(module, exports, require) {
 // Date conversions are delegated to the persian-calendar plugin API.
@@ -523,7 +520,6 @@ function dateFa(p, d) { const j = jalali(p, d); return j ? fa(p, `${j.jy}/${pad(
 function clockFa(p, d) { return fa(p, `${pad(d.getHours())}:${pad(d.getMinutes())}`); }
 function monthDays(p, y, m) { const first = fromJ(p, y, m, 1), next = m === 12 ? fromJ(p, y + 1, 1, 1) : fromJ(p, y, m + 1, 1); return first && next ? Math.round((Date.UTC(next.getFullYear(), next.getMonth(), next.getDate()) - Date.UTC(first.getFullYear(), first.getMonth(), first.getDate())) / 86400000) : 30; }
 module.exports = { pad, iso, dateKey, localDateKey, fromISO, fa, en, jalali, fromJ, dateFa, clockFa, monthDays };
-
 },
 "src/shared/dom.js": function(module, exports, require) {
 // DOM helpers shared by every Obsidian UI view.
@@ -537,7 +533,6 @@ function B(parent, label, glyph, cls, fn) { const b = E(parent, 'button', cls); 
     E(b, 'span', '', label); if (fn)
     b.addEventListener('click', fn); return b; }
 module.exports = { E, I, B };
-
 
 },
 "src/core/daily-notes.js": function(module, exports, require) {
@@ -682,7 +677,6 @@ async function withNoteWrite(p, target, write) {
 }
 module.exports.withNoteWrite = withNoteWrite;
 
-
 },
 "src/editor/widgets.js": function(module, exports, require) {
 // Live Preview widgets and colored-task line decorations.
@@ -757,7 +751,6 @@ function editorExtension(p) {
     }, { decorations: v => v.decorations });
 }
 module.exports = { refreshEffect, editorExtension };
-
 
 },
 "src/ui/task-modal.js": function(module, exports, require) {
@@ -950,7 +943,6 @@ class TaskModal extends Modal {
 }
 module.exports = { TaskModal };
 
-
 },
 "src/ui/calendar.js": function(module, exports, require) {
 // Compact Jalali calendar and dashboard date-count markers.
@@ -1013,7 +1005,6 @@ class Calendar {
     }
 }
 module.exports = { Calendar };
-
 
 },
 "src/ui/material-clock.js": function(module, exports, require) {
@@ -1275,7 +1266,6 @@ class MaterialClock {
 }
 module.exports = { MaterialClock };
 
-
 },
 "src/ui/keyboard-viewport.js": function(module, exports, require) {
 const { Platform } = require('obsidian');
@@ -1344,7 +1334,6 @@ function watchKeyboard(modal, scroller) {
     };
 }
 module.exports = { watchKeyboard };
-
 
 },
 "src/ui/reminder-alert.js": function(module, exports, require) {
@@ -1457,7 +1446,6 @@ class ReminderAlert extends Modal {
 }
 module.exports = { ReminderAlert };
 
-
 },
 "src/core/reminders.js": function(module, exports, require) {
 const { fromISO } = require("src/core/dates.js");
@@ -1528,7 +1516,6 @@ class ReminderScheduler {
 }
 module.exports = { reminderKey, pendingReminders, ReminderScheduler };
 
-
 },
 "src/core/appearance.js": function(module, exports, require) {
 const { DEFAULTS } = require("src/core/constants.js");
@@ -1591,7 +1578,6 @@ function paintRemaining(p, element, item, now) {
     return info;
 }
 module.exports = { gradientAngle, cardTint, contrastText, remainingInfo, paintRemaining };
-
 
 },
 "src/views/sidebar.js": function(module, exports, require) {
@@ -1674,7 +1660,6 @@ class Sidebar extends ItemView {
 }
 module.exports = { Sidebar };
 
-
 },
 "src/ui/task-card.js": function(module, exports, require) {
 // Task cards shared by sidebar/dashboard + remaining-time badges.
@@ -1724,7 +1709,6 @@ function taskCard(p, parent, item, compact = false) {
     return box;
 }
 module.exports = { empty, taskCard };
-
 
 },
 "src/ui/view-parts.js": function(module, exports, require) {
@@ -1850,7 +1834,6 @@ function matchesQuery(item, query) {
 }
 module.exports = { panelHeader, stats, dayPicker, searchField, matchesQuery };
 
-
 },
 "src/views/dashboard.js": function(module, exports, require) {
 const { ItemView, Notice } = require('obsidian');
@@ -1975,7 +1958,6 @@ class Dashboard extends ItemView {
     }
 }
 module.exports = { Dashboard };
-
 
 },
 "src/settings.js": function(module, exports, require) {
