@@ -100,7 +100,6 @@ class ReminderCodeBlock extends MarkdownRenderChild {
     }
 }
 
-
 class UpdateNotice extends Modal {
     constructor(plugin) { super(plugin.app); this.plugin = plugin; }
     onOpen() {
@@ -120,7 +119,7 @@ class UpdateNotice extends Modal {
         E(feature, 'span', 'pr-update-kicker', 'قابلیت جدید');
         E(feature, 'h3', '', 'برنامهٔ پیش رو در هر یادداشت');
         E(feature, 'p', '', 'بلوک کد persian-reminder را در هر یادداشتی بگذارید تا همهٔ یادآوری‌های فعال و آیندهٔ کل ولت نمایش داده شوند؛ حتی اگر یادآوری در فایل دیگری ثبت شده باشد.');
-        const code = E(feature, 'code', 'pr-update-code', '```persian-reminder\\n```');
+        const code = E(feature, 'code', 'pr-update-code', '```persian-reminder\n```');
         code.setAttribute('dir', 'ltr');
         const list = E(body, 'ul', 'pr-update-list');
         for (const text of [
@@ -134,7 +133,6 @@ class UpdateNotice extends Modal {
         B(footer, 'متوجه شدم', 'check', 'pr-save-btn', () => this.close());
     }
 }
-
 module.exports = class PersianReminder extends Plugin {
     async onload() {
         this.settings = { ...DEFAULTS, ...await this.loadData() };
@@ -2143,7 +2141,7 @@ class SettingsTab extends PluginSettingTab {
         E(card, 'span', 'pr-update-kicker', 'نسخهٔ ۱.۰.۹');
         E(card, 'h3', '', 'برنامهٔ پیش رو؛ از تمام یادداشت‌های ولت');
         E(card, 'p', '', 'بلوک کد persian-reminder در هر یادداشتی، فهرست یکپارچهٔ یادآوری‌های فعال و آیندهٔ کل ولت را نمایش می‌دهد؛ حتی اگر کارها در یادداشت‌های دیگری ثبت شده باشند.');
-        const code = E(card, 'code', 'pr-update-code', '```persian-reminder\\n```');
+        const code = E(card, 'code', 'pr-update-code', '```persian-reminder\n```');
         code.setAttribute('dir', 'ltr');
         const list = E(card, 'ul', 'pr-update-list');
         for (const text of [
@@ -2152,7 +2150,7 @@ class SettingsTab extends PluginSettingTab {
             'کارت‌هایی با تاریخ شمسی، ساعت، برچسب امروز/فردا/روزهای آینده و نام یادداشت مبدأ.',
             'با انتخاب هر کارت، یادداشت اصلی و خط مربوط به آن باز می‌شود؛ فهرست با تغییر کارها تازه می‌شود.'
         ]) E(list, 'li', '', text);
-        E(card, 'p', 'pr-update-footnote', 'این ویجت از ایندکس اصلی Persian Reminder استفاده می‌کند و دادهٔ جداگانه‌ای نمی‌سازد. برای تاریخ شمسی، Persian Calendar باید فعال باشد.');
+        E(card, 'p', 'pr-update-footnote', 'این ویجت از ایندکس اصلی Persian Reminder استفاده می‌کند و دادهٔ جداگانه‌ای نمی‌سازد. برای تاریخ شمسی، Persian Calendar باید فعال باشد. ظاهر کارت‌ها با تم روشن و تاریک و صفحهٔ موبایل هماهنگ شده است.');
         new Setting(section).setName('نمایش دوبارهٔ پیام به‌روزرسانی').setDesc('اگر پیام معرفی نسخه را بستید، می‌توانید آن را دوباره باز کنید.')
             .addButton(button => button.setButtonText('نمایش پیام').onClick(() => p.showUpdateNotice(true)));
     }
@@ -2589,6 +2587,7 @@ function renderCreatorSupport(container, language) {
   const button = link(donate, 'ot-donation-button', 'https://reymit.ir/singhaf9270', fa ? 'حمایت مالی از سازنده در ریمیت' : 'Support the creator on Reymit');
   button.textContent = fa ? 'حمایت مالی ↗' : 'Donate ↗';
 }
+
 
 }
 };
