@@ -1,3 +1,30 @@
+## Persian Reminder 1.0.9
+
+### فارسی
+
+این نسخه یادآوری‌ها را به متن یادداشت‌های شما نزدیک‌تر می‌کند. از این پس می‌توانید کارهای مربوط به هر یادداشت را همان‌جا ببینید، یادآوری تازه بسازید و وضعیت کارها را دنبال کنید.
+
+- **ویجت یادآوری درون یادداشت:** با افزودن بلوک کد `persian-reminder`، یادآوری‌های همان یادداشت در یک بخش مرتب نمایش داده می‌شوند.
+- **افزودن سریع:** از دکمهٔ «افزودن یادآوری» در ویجت استفاده کنید تا یادآوری جدید مستقیماً به همان یادداشت متصل شود.
+- **نمایش منظم کارها:** یادآوری‌ها بر اساس زمان سررسید مرتب می‌شوند و کارهای انجام‌شده از کارهای فعال قابل تشخیص‌اند.
+- **به‌روزرسانی خودکار:** با ایجاد، ویرایش یا تکمیل یادآوری، محتوای ویجت نیز تازه می‌شود.
+- **اعلان تغییرات نسخه:** پس از به‌روزرسانی، معرفی قابلیت‌های جدید نمایش داده می‌شود و شرح آن‌ها همیشه از بخش «تازه‌های نسخه» در تنظیمات در دسترس است.
+
+برای استفاده، این بلوک را در هر یادداشت قرار دهید:
+
+```persian-reminder
+```
+
+یادآوری‌ها از داده‌های فعلی افزونه خوانده می‌شوند و فایل یا دادهٔ تکراری ساخته نمی‌شود. برای نمایش تاریخ شمسی، افزونهٔ Persian Calendar باید فعال باشد.
+
+### English
+
+- Add a `persian-reminder` code block to show reminders belonging to the current note.
+- Create reminders directly from the widget and keep the current note as their destination.
+- Sort reminders by due time and distinguish active from completed tasks.
+- Refresh the widget when reminder data changes.
+- Show a one-time update announcement after upgrading, with a permanent changelog page in settings.
+
 ## Persian Reminder 1.0.8
 
 - Add a `persian-reminder` code block to display reminders belonging to the current note.
