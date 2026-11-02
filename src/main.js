@@ -22,17 +22,19 @@ function parseAgendaTask(p, raw, path, line) {
     if (!marker) return null;
     const [y, mo, day, hour, minute] = marker.slice(2).map(value => value == null ? null : en(p, value));
     const hasTime = hour !== null && minute !== null;
-    const h = hasTime ? hour : '00', min = hasTime ? minute : '00';
+    // Date-only agenda items remain due through the end of their calendar day.
+    const h = hasTime ? hour : '23', min = hasTime ? minute : '59';
     let date = marker[1]
         ? fromJ(p, Number(y), Number(mo), Number(day))
         : fromISO(`${y}-${mo}-${day}T${h}:${min}`);
     if (!date) return null;
     date.setHours(Number(h), Number(min), 0, 0);
-    const cleanText = task[4].replace(marker[0], '').replace(/\s+/g, ' ').trim();
+    const place = [...task[4].matchAll(PLACE)].at(-1)?.[1] || '';
+    const cleanText = task[4].replace(marker[0], '').replace(PLACE, '').replace(/\s+/g, ' ').trim();
     const tags = [...cleanText.matchAll(/(?:^|\s)#([\p{L}\p{N}_-]+)/gu)].map(match => match[1]);
     const title = cleanText.replace(/(?:^|\s)#[\p{L}\p{N}_-]+/gu, ' ').replace(/\s+/g, ' ').trim();
     return {
-        raw, title, tags, at: iso(date), done: false, path, line, hasTime
+        raw, title, tags, place, at: iso(date), done: false, path, line, hasTime
     };
 }
 
@@ -125,14 +127,14 @@ class UpdateNotice extends Modal {
     onOpen() {
         this.modalEl.addClass('pr-modal', 'pr-update-modal');
         this.modalEl.setAttribute('role', 'dialog');
-        this.modalEl.setAttribute('aria-label', 'تغییرات نسخه ۱.۰.۹');
+        this.modalEl.setAttribute('aria-label', 'تغییرات نسخه ۱.۰.۱۱');
         const root = this.contentEl;
         root.replaceChildren();
         const header = E(root, 'div', 'pr-modal-header');
         I(header, 'sparkles');
         const title = E(header, 'div');
         E(title, 'strong', '', 'تازه‌های Persian Reminder');
-        E(title, 'small', '', 'نسخهٔ ۱.۰.۹');
+        E(title, 'small', '', 'نسخهٔ ۱.۰.۱۱');
         const body = E(root, 'div', 'pr-modal-body pr-update-body');
         E(body, 'p', 'pr-update-intro', 'در این نسخه می‌توانید برنامهٔ پیش رو را از تمام یادداشت‌های ولت، یک‌جا و با ظاهری شبیه یک فهرست برنامه‌ریزی مرتب ببینید.');
         const feature = E(body, 'article', 'pr-update-feature');
@@ -207,7 +209,7 @@ module.exports = class PersianReminder extends Plugin {
     onunload() { this.unloading = true; this.scheduler?.stop(); this.alertModal?.close(); for (const timer of this.scanTimers.values())
         window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-gradient-angle', '--pr-card-tint', '--pr-accent-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border','text'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
     async showUpdateNotice(force = false) {
-        const version = '1.0.10';
+        const version = '1.0.11';
         if (!force && this.settings.lastSeenVersion === version) return;
         this.settings.lastSeenVersion = version;
         await this.persist();
