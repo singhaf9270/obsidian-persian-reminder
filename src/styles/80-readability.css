@@ -47,4 +47,4 @@
 .pr-settings-update-card .pr-update-code { margin-block: 4px; }
 
 
-.markdown-preview-view li.pr-colored-task { color: var(--pr-task-text-color, inherit); }
+.markdown-preview-view li.task-list-item { color: var(--pr-task-text-color, inherit); }
