@@ -1,3 +1,21 @@
+## Persian Reminder 1.0.10
+
+### فارسی
+
+- یکپارچه‌سازی ظاهر ویجت «برنامهٔ پیش رو» با رنگ‌ها، پس‌زمینه، حاشیه‌ها و نشان‌های تاریخ افزونه در تم روشن و تاریک.
+- نمایش هشتگ‌های هر کار در ویجت با همان کلاس و ظاهر تگ‌های بومی Obsidian در سایدبار؛ هشتگ‌ها از عنوان جدا می‌شوند.
+- بازطراحی کارت‌ها و نشانگرهای تاریخ، ساعت و فاصله تا سررسید برای خوانایی بهتر.
+- بهبود چیدمان واکنش‌گرا بر اساس عرض پنل و صفحهٔ موبایل؛ جلوگیری از بیرون‌زدگی عنوان‌ها و برچسب‌ها.
+- کاهش انیمیشن در صورت فعال بودن تنظیم کاهش حرکت سیستم.
+
+### English
+
+- Match the upcoming agenda widget to Persian Reminder's shared light/dark theme, card surfaces, borders and date badges.
+- Parse task hashtags and render them with Obsidian's native `.tag` styling, matching sidebar tags.
+- Refine task cards and date/time/relative-day badges for consistent readability.
+- Improve pane-aware and mobile responsive layouts, including long titles and tags.
+- Respect reduced-motion preferences.
+
 ## Persian Reminder 1.0.9
 
 ### فارسی
