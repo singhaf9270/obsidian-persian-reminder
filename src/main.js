@@ -43,22 +43,21 @@ class ReminderCodeBlock extends MarkdownRenderChild {
         root.replaceChildren();
         root.classList.add('pr-root', 'pr-agenda-widget');
         const header = E(root, 'div', 'pr-agenda-header');
-        E(header, 'span', 'pr-agenda-mark', '📋');
-        const heading = E(header, 'div', 'pr-agenda-heading');
-        E(heading, 'strong', '', 'برنامهٔ پیش رو');
+        E(header, 'span', 'pr-agenda-icon', '📋');
+        E(header, 'span', 'pr-agenda-heading', 'برنامهٔ پیش رو');
+        E(header, 'span', 'pr-agenda-header-line');
         const now = new Date();
         const tasks = p.items().filter(item => {
             const due = fromISO(item.at);
             return !item.done && due && due.getTime() >= now.getTime();
         }).sort((a, b) => a.at.localeCompare(b.at));
         const count = p.api()?.toFaNumber?.(String(tasks.length)) || String(tasks.length);
-        E(heading, 'small', '', count + ' کار در پیش رو');
+        header.setAttribute('aria-label', count + ' کار در پیش رو');
         const list = E(root, 'div', 'pr-agenda-list');
         if (!tasks.length) {
             const state = E(list, 'div', 'pr-agenda-empty');
-            E(state, 'span', 'pr-agenda-empty-icon', '🌿');
-            E(state, 'strong', '', 'فعلاً کاری در پیش نیست');
-            E(state, 'small', '', 'یادآوری‌های امروز و روزهای آینده اینجا نمایش داده می‌شوند.');
+            E(state, 'span', 'pr-agenda-empty-icon', '✅');
+            E(state, 'span', '', 'هیچ وظیفه‌ای برای امروز و آینده پیدا نشد.');
             return;
         }
         tasks.forEach(item => {
@@ -66,31 +65,29 @@ class ReminderCodeBlock extends MarkdownRenderChild {
             card.tabIndex = 0;
             card.setAttribute('role', 'button');
             card.setAttribute('aria-label', 'بازکردن یادداشت: ' + (item.title || 'بدون عنوان'));
+            card.title = 'برای رفتن به یادداشت کلیک کنید';
             const open = () => p.openFile(item);
             card.addEventListener('click', open);
             card.addEventListener('keydown', event => {
                 if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
             });
-            const top = E(card, 'div', 'pr-agenda-card-top');
-            E(top, 'span', 'pr-agenda-check', '○');
-            E(top, 'div', 'pr-agenda-title', item.title || 'بدون عنوان');
-            const meta = E(card, 'div', 'pr-agenda-meta'), date = fromISO(item.at);
+            const main = E(card, 'div', 'pr-agenda-card-main');
+            const content = E(main, 'div', 'pr-agenda-task-content');
+            E(content, 'span', 'pr-agenda-title', item.title || 'بدون عنوان');
+            const meta = E(main, 'div', 'pr-agenda-task-meta'), date = fromISO(item.at);
             if (date) {
-                const dateBadge = E(meta, 'span', 'pr-agenda-date');
+                const dateBadge = E(meta, 'div', 'pr-agenda-date-badge');
                 I(dateBadge, 'calendar-days'); E(dateBadge, 'span', '', dateFa(p, date));
-                const timeBadge = E(meta, 'span', 'pr-agenda-time');
+                const timeBadge = E(meta, 'div', 'pr-agenda-time-badge');
                 I(timeBadge, 'clock-3'); E(timeBadge, 'span', '', clockFa(p, date));
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const dueDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
                 const days = Math.round((dueDay - today) / 86400000);
                 const label = days === 0 ? 'امروز' : days === 1 ? 'فردا' :
                     (p.api()?.toFaNumber?.(String(days)) || String(days)) + ' روز دیگر';
-                const badge = E(meta, 'span', 'pr-agenda-remaining', label);
-                badge.classList.add(days === 0 ? 'is-today' : days === 1 ? 'is-tomorrow' : 'is-future');
+                const badge = E(card, 'div', 'pr-agenda-days-left', label);
+                badge.classList.add(days === 0 ? 'today' : days === 1 ? 'tomorrow' : 'future');
             }
-            const source = E(card, 'div', 'pr-agenda-source');
-            I(source, 'file-text');
-            E(source, 'span', '', item.path.split('/').pop().replace(/\.md$/i, ''));
         });
     }
 }
