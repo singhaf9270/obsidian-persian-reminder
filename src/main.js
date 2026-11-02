@@ -263,10 +263,28 @@ module.exports = class PersianReminder extends Plugin {
     catch (e) {
         console.error('[Persian Reminder scan]', e);
     } }
-    indexText(path, source, refresh = true) { const arr = [], agenda = []; source.split(/\r?\n/).forEach((raw, line) => { const it = parseTask(this, raw); if (it?.at)
-        arr.push({ ...it, path, line }); const upcoming = parseAgendaTask(this, raw, path, line); if (upcoming)
-        agenda.push(upcoming); }); this.index.set(path, arr); this.agendaIndex.set(path, agenda); this.scheduler?.wake(); if (refresh)
-        this.refresh(); }
+    indexText(path, source, refresh = true) {
+        const arr = [], agenda = [];
+        let fenceChar = null, fenceLength = 0;
+        source.split(/\r?\n/).forEach((raw, line) => {
+            const fence = /^\s*(`{3,}|~{3,})/.exec(raw);
+            if (fence) {
+                const char = fence[1][0], length = fence[1].length;
+                if (!fenceChar) { fenceChar = char; fenceLength = length; }
+                else if (char === fenceChar && length >= fenceLength) { fenceChar = null; fenceLength = 0; }
+                return;
+            }
+            if (fenceChar) return;
+            const it = parseTask(this, raw);
+            if (it?.at) arr.push({ ...it, path, line });
+            const upcoming = parseAgendaTask(this, raw, path, line);
+            if (upcoming) agenda.push(upcoming);
+        });
+        this.index.set(path, arr);
+        this.agendaIndex.set(path, agenda);
+        this.scheduler?.wake();
+        if (refresh) this.refresh();
+    }
     agendaItems() { return [...this.agendaIndex.values()].flat(); }
     items() { return [...this.index.values()].flat().sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at)); }
     refresh() { for (const type of [SIDE, DASH])
