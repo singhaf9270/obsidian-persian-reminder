@@ -54,10 +54,10 @@ function loadBundle(file) {
 const fresh=loadBundle(path.resolve(root,'main.js'));
 assert.equal(typeof fresh,'function');
 assert.deepEqual(Object.getOwnPropertyNames(fresh.prototype), [
-  'constructor', 'onload', 'onunload', 'api', 'persist', 'applyTheme',
+  'constructor', 'onload', 'onunload', 'showUpdateNotice', 'api', 'persist', 'applyTheme',
   'requestEditorUpdate', 'show', 'sidebar', 'dashboard', 'create', 'edit',
   'destination', 'dailyDestination', 'editor', 'openFromCM', 'openTask', 'scanAll', 'scan',
-  'indexText', 'items', 'refresh', 'findLine', 'change', 'remove',
+  'indexText', 'agendaItems', 'items', 'refresh', 'findLine', 'change', 'remove',
   'add', 'openFile', 'reading', 'showAlerts', 'notify'
 ]);
 console.log('OK: Jalali parse/write, saved task metadata, task colors, output module load and plugin methods.');
