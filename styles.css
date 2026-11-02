@@ -883,14 +883,33 @@
 .pr-material-instructions { font-size: .9em; }
 .pr-root .pr-note-path, .pr-root .pr-day-destination { line-height: 1.8; }
 
-/* Note-level reminder code block. */
-.pr-code-block { display: flex; flex-direction: column; gap: 12px; margin-block: 12px; padding: 14px; border: 1px solid var(--pr-edge); border-radius: 14px; background: var(--pr-layer); }
-.pr-code-block-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.pr-code-block-heading { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.pr-code-block-heading strong { color: var(--text-normal); font-size: .95em; }
-.pr-code-block-heading small { color: var(--text-muted); font-size: .78em; }
-.pr-code-block-list { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
-.pr-code-block .pr-empty { min-height: 90px; padding: 12px; }
+/* Vault-wide upcoming agenda widget — visual direction inspired by PersianTasks.js. */
+.pr-agenda-widget{direction:rtl;display:flex;flex-direction:column;gap:14px;margin-block:16px;padding:18px;border:1px solid var(--background-modifier-border);border-radius:20px;background:linear-gradient(135deg,color-mix(in srgb,var(--interactive-accent) 9%,var(--background-primary)),var(--background-primary) 68%);box-shadow:0 8px 26px rgba(30,50,70,.07)}
+.pr-agenda-header{display:flex;align-items:center;gap:11px;padding:2px 2px 12px;border-bottom:1px solid var(--background-modifier-border)}
+.pr-agenda-mark{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:14px;background:var(--background-primary);box-shadow:0 3px 12px rgba(0,0,0,.06);font-size:22px}
+.pr-agenda-heading{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pr-agenda-heading strong{color:var(--text-normal);font-size:1.08em;font-weight:750}
+.pr-agenda-heading small{color:var(--text-muted);font-size:.78em}
+.pr-agenda-list{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pr-agenda-card{display:flex;flex-direction:column;gap:10px;min-width:0;padding:14px 15px;border:1px solid var(--background-modifier-border);border-inline-start:4px solid var(--interactive-accent);border-radius:14px;background:var(--background-primary);box-shadow:0 3px 12px rgba(25,40,55,.045);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.pr-agenda-card:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(25,40,55,.09);border-color:var(--interactive-accent)}
+.pr-agenda-card:focus-visible{outline:2px solid var(--interactive-accent);outline-offset:3px}
+.pr-agenda-card-top{display:flex;align-items:flex-start;gap:9px;min-width:0}
+.pr-agenda-check{display:grid;place-items:center;flex:0 0 23px;width:23px;height:23px;border:1.5px solid var(--interactive-accent);border-radius:50%;color:var(--interactive-accent);font-size:18px;line-height:1}
+.pr-agenda-title{min-width:0;color:var(--text-normal);font-size:.96em;font-weight:650;line-height:1.8;overflow-wrap:anywhere}
+.pr-agenda-meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.pr-agenda-date,.pr-agenda-time,.pr-agenda-remaining{display:inline-flex;align-items:center;gap:5px;min-height:27px;padding:4px 9px;border-radius:8px;font-size:.77em;line-height:1.4;white-space:nowrap}
+.pr-agenda-date{background:color-mix(in srgb,var(--interactive-accent) 11%,var(--background-secondary));color:var(--text-normal)}
+.pr-agenda-time{background:var(--background-secondary);color:var(--text-muted)}
+.pr-agenda-remaining{margin-inline-start:auto;background:color-mix(in srgb,var(--interactive-accent) 12%,var(--background-secondary));color:var(--text-accent);font-weight:700}
+.pr-agenda-remaining.is-today{background:rgba(34,160,107,.13);color:#168354}
+.pr-agenda-remaining.is-tomorrow{background:rgba(230,159,0,.15);color:#a86b00}
+.pr-agenda-source{display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid var(--background-modifier-border);color:var(--text-faint);font-size:.73em;overflow-wrap:anywhere}
+.pr-agenda-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:125px;padding:18px;border:1px dashed var(--background-modifier-border);border-radius:14px;background:var(--background-primary);text-align:center}
+.pr-agenda-empty-icon{font-size:25px}
+.pr-agenda-empty strong{color:var(--text-normal);font-size:.92em}
+.pr-agenda-empty small{color:var(--text-muted);font-size:.78em;line-height:1.8}
+@media(max-width:520px){.pr-agenda-widget{gap:11px;padding:12px;border-radius:16px}.pr-agenda-card{padding:12px;gap:9px}.pr-agenda-meta{gap:6px}.pr-agenda-date,.pr-agenda-time,.pr-agenda-remaining{font-size:.72em;padding:4px 7px}.pr-agenda-remaining{margin-inline-start:0}}
 
 /* SOURCE: src/styles/85-badges.css */
 /* Independently configurable pill badges; selectors restricted to this plugin. */
