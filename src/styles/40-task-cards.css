@@ -28,3 +28,9 @@
 .pr-empty > span:first-child { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px dashed var(--pr-edge); border-radius: 15px; background: var(--pr-layer); }
 .pr-empty svg { width: 22px; height: 22px; }
 .pr-empty-add { align-self: center; margin-bottom: 15px; }
+
+
+/* Optional task title color; the empty setting follows the active Obsidian theme. */
+.pr-task-card .pr-title { color: var(--pr-task-text-color, var(--text-normal)); }
+.pr-task-card.pr-due-done .pr-title { color: var(--text-muted); }
+.pr-settings-preview .pr-preview-task-title { color: var(--pr-task-text-color, var(--text-normal)); }
