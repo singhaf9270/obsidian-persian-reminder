@@ -2,28 +2,28 @@
 
 ### فارسی
 
-این نسخه یادآوری‌ها را به متن یادداشت‌های شما نزدیک‌تر می‌کند. از این پس می‌توانید کارهای مربوط به هر یادداشت را همان‌جا ببینید، یادآوری تازه بسازید و وضعیت کارها را دنبال کنید.
+- **ویجت «برنامهٔ پیش رو»:** بلوک کد `persian-reminder` اکنون یادآوری‌های کل ولت را نمایش می‌دهد، نه فقط یادآوری‌های یادداشت میزبان.
+- **نمایش کارهای آینده:** فقط یادآوری‌های انجام‌نشدهٔ امروز و آینده نمایش داده می‌شوند و بر اساس زمان سررسید مرتب هستند.
+- **کارت‌های بازطراحی‌شده:** ظاهر کارت‌ها با الهام از اسکریپت PersianTasks.js بازطراحی شده؛ تاریخ شمسی، ساعت، برچسب امروز/فردا/روزهای آینده و نام یادداشت مبدأ نمایش داده می‌شود.
+- **رفتن به یادداشت مبدأ:** با انتخاب هر کارت، یادداشت اصلی در محل همان کار باز می‌شود.
+- **سازگاری با موبایل و تم‌ها:** چیدمان در عرض کم جمع‌وجور می‌شود و از رنگ‌های استاندارد تم Obsidian استفاده می‌کند.
+- **اعلان به‌روزرسانی:** پس از ارتقا، پیام معرفی نسخه نمایش داده می‌شود و شرح قابلیت‌ها در صفحهٔ «تازه‌های نسخه» تنظیمات باقی می‌ماند.
 
-- **ویجت یادآوری درون یادداشت:** با افزودن بلوک کد `persian-reminder`، یادآوری‌های همان یادداشت در یک بخش مرتب نمایش داده می‌شوند.
-- **افزودن سریع:** از دکمهٔ «افزودن یادآوری» در ویجت استفاده کنید تا یادآوری جدید مستقیماً به همان یادداشت متصل شود.
-- **نمایش منظم کارها:** یادآوری‌ها بر اساس زمان سررسید مرتب می‌شوند و کارهای انجام‌شده از کارهای فعال قابل تشخیص‌اند.
-- **به‌روزرسانی خودکار:** با ایجاد، ویرایش یا تکمیل یادآوری، محتوای ویجت نیز تازه می‌شود.
-- **اعلان تغییرات نسخه:** پس از به‌روزرسانی، معرفی قابلیت‌های جدید نمایش داده می‌شود و شرح آن‌ها همیشه از بخش «تازه‌های نسخه» در تنظیمات در دسترس است.
-
-برای استفاده، این بلوک را در هر یادداشت قرار دهید:
+برای استفاده، این بلوک را در هر یادداشتی قرار دهید:
 
 ```persian-reminder
 ```
 
-یادآوری‌ها از داده‌های فعلی افزونه خوانده می‌شوند و فایل یا دادهٔ تکراری ساخته نمی‌شود. برای نمایش تاریخ شمسی، افزونهٔ Persian Calendar باید فعال باشد.
+یادآوری‌ها باید با خود افزونهٔ Persian Reminder ثبت شده باشند. ویجت از ایندکس اصلی افزونه استفاده می‌کند و فایل یا دادهٔ جداگانه نمی‌سازد. برای نمایش تاریخ شمسی، Persian Calendar باید فعال باشد.
 
 ### English
 
-- Add a `persian-reminder` code block to show reminders belonging to the current note.
-- Create reminders directly from the widget and keep the current note as their destination.
-- Sort reminders by due time and distinguish active from completed tasks.
-- Refresh the widget when reminder data changes.
-- Show a one-time update announcement after upgrading, with a permanent changelog page in settings.
+- Add a vault-wide **Upcoming agenda** widget using the `persian-reminder` code block.
+- Show only incomplete reminders due today or in the future, sorted by due date and time.
+- Redesign the cards based on the supplied PersianTasks.js visual reference, with Jalali date, time, relative-day badge, and source-note name.
+- Open the original note at the reminder line when a card is selected.
+- Improve mobile layout and light/dark theme compatibility.
+- Add a one-time update announcement and a persistent **What's new** page in settings.
 
 ## Persian Reminder 1.0.8
 
