@@ -45,3 +45,6 @@
 .pr-settings-update-card { margin-block: 12px 18px; }
 .pr-settings-update-card > p { margin: 0; color: var(--text-muted); font-size: .88em; line-height: 1.9; }
 .pr-settings-update-card .pr-update-code { margin-block: 4px; }
+
+
+.markdown-preview-view li.pr-colored-task { color: var(--pr-task-text-color, inherit); }
