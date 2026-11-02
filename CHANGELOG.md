@@ -2,9 +2,9 @@
 
 ### فارسی
 
-- **ویجت «برنامهٔ پیش رو»:** بلوک کد `persian-reminder` اکنون وظایف زمان‌دار را از تمام فایل‌های Markdown ولت می‌خواند، نه فقط یادآوری‌های یادداشت میزبان؛ نشانگر تاریخ با ساعت اختیاری پشتیبانی می‌شود.
+- **ویجت «برنامهٔ پیش رو»:** بلوک کد `persian-reminder` وظایف تیک‌نخوردهٔ دارای نشانگر تاریخ `(@YYYY-MM-DD)` را از تمام فایل‌های Markdown ولت جمع‌آوری می‌کند؛ ساعت اختیاری است و قالب شمسی افزونه نیز پشتیبانی می‌شود.
 - **نمایش کارهای آینده:** فقط وظایف تیک‌نخوردهٔ امروز و آینده نمایش داده می‌شوند و بر اساس زمان سررسید مرتب هستند؛ ساعت برای وظایف بدون ساعت، اختیاری است.
-- **کارت‌های بازطراحی‌شده:** ظاهر کارت‌ها با الهام از اسکریپت PersianTasks.js بازطراحی شده؛ تاریخ شمسی، ساعت، برچسب امروز/فردا/روزهای آینده و نام یادداشت مبدأ نمایش داده می‌شود.
+- **کارت‌های بازطراحی‌شده:** ظاهر کارت‌ها با الهام از اسکریپت PersianTasks.js بازطراحی شده؛ تاریخ شمسی، ساعت در صورت ثبت و برچسب امروز/فردا/روزهای آینده نمایش داده می‌شود.
 - **رفتن به یادداشت مبدأ:** با انتخاب هر کارت، یادداشت اصلی در محل همان کار باز می‌شود.
 - **سازگاری با موبایل و تم‌ها:** چیدمان در عرض کم جمع‌وجور می‌شود و از رنگ‌های استاندارد تم Obsidian استفاده می‌کند.
 - **اعلان به‌روزرسانی:** پس از ارتقا، پیام معرفی نسخه نمایش داده می‌شود و شرح قابلیت‌ها در صفحهٔ «تازه‌های نسخه» تنظیمات باقی می‌ماند.
@@ -14,13 +14,13 @@
 ```persian-reminder
 ```
 
-یادآوری‌ها باید با خود افزونهٔ Persian Reminder ثبت شده باشند. ویجت از ایندکس اصلی افزونه استفاده می‌کند و فایل یا دادهٔ جداگانه نمی‌سازد. برای نمایش تاریخ شمسی، Persian Calendar باید فعال باشد.
+وظایف با نشانگر تاریخ در متن یادداشت‌ها شناسایی می‌شوند؛ برای نمونه `- [ ] آماده‌کردن جلسه (@2026-11-03 09:30)`. ویجت همهٔ یادداشت‌های Markdown را می‌خواند و فایل یا دادهٔ جداگانه‌ای نمی‌سازد. برای نمایش تاریخ شمسی، Persian Calendar باید فعال باشد.
 
 ### English
 
 - Add a vault-wide **Upcoming agenda** widget using the `persian-reminder` code block.
-- Show only incomplete reminders due today or in the future, sorted by due date and time.
-- Redesign the cards based on the supplied PersianTasks.js visual reference, with Jalali date, time, relative-day badge, and source-note name.
+- Find unchecked Markdown tasks with `(@YYYY-MM-DD)` date markers across the vault; time is optional. Show only today and future tasks, sorted by due date.
+- Redesign the cards based on the supplied PersianTasks.js visual reference, with Jalali date, optional time, and a relative-day badge.
 - Open the original note at the reminder line when a card is selected.
 - Improve mobile layout and light/dark theme compatibility.
 - Add a one-time update announcement and a persistent **What's new** page in settings.
