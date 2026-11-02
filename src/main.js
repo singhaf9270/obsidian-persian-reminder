@@ -2,7 +2,7 @@
 const { Plugin, Modal, Notice, MarkdownView, MarkdownRenderChild, TFile, Platform } = require('obsidian');
 const { SIDE, DASH, DEFAULTS, PALETTES, TASK, PLACE } = require('./core/constants');
 const { cssColor, parseTask, buildTask, status, paintTask } = require('./core/tasks');
-const { fromISO, dateFa, clockFa } = require('./core/dates');
+const { fromISO, fromJ, iso, en, dateFa, clockFa } = require('./core/dates');
 const { E, I, B } = require('./shared/dom');
 const { dailyNotePath, dailyOptions, notePath, appendLine, insertDailyTask, createDailyFromTemplate, withNoteWrite } = require('./core/daily-notes');
 const { refreshEffect, editorExtension } = require('./editor/widgets');
@@ -14,6 +14,25 @@ const { Sidebar } = require('./views/sidebar');
 const { Dashboard } = require('./views/dashboard');
 const { SettingsTab } = require('./settings');
 const { empty, taskCard } = require('./ui/task-card');
+
+function parseAgendaTask(p, raw, path, line) {
+    const task = TASK.exec(raw);
+    if (!task || task[2].toLowerCase() === 'x') return null;
+    const marker = [...task[4].matchAll(/\(@(j:)?([0-9۰-۹٠-٩]{4})-([0-9۰-۹٠-٩]{2})-([0-9۰-۹٠-٩]{2})(?:\s+([0-9۰-۹٠-٩]{2}):([0-9۰-۹٠-٩]{2}))?\)/g)][0];
+    if (!marker) return null;
+    const [y, mo, day, hour, minute] = marker.slice(2).map(value => value == null ? null : en(p, value));
+    const hasTime = hour !== null && minute !== null;
+    const h = hasTime ? hour : '00', min = hasTime ? minute : '00';
+    let date = marker[1]
+        ? fromJ(p, Number(y), Number(mo), Number(day))
+        : fromISO(`${y}-${mo}-${day}T${h}:${min}`);
+    if (!date) return null;
+    date.setHours(Number(h), Number(min), 0, 0);
+    return {
+        raw, title: task[4].replace(marker[0], '').replace(/\s+/g, ' ').trim(),
+        at: iso(date), done: false, path, line, hasTime
+    };
+}
 
 class ReminderCodeBlock extends MarkdownRenderChild {
     constructor(plugin, el, sourcePath) {
@@ -47,9 +66,10 @@ class ReminderCodeBlock extends MarkdownRenderChild {
         E(header, 'span', 'pr-agenda-heading', 'برنامهٔ پیش رو');
         E(header, 'span', 'pr-agenda-header-line');
         const now = new Date();
-        const tasks = p.items().filter(item => {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tasks = p.agendaItems().filter(item => {
             const due = fromISO(item.at);
-            return !item.done && due && due.getTime() >= now.getTime();
+            return due && new Date(due.getFullYear(), due.getMonth(), due.getDate()) >= today;
         }).sort((a, b) => a.at.localeCompare(b.at));
         const count = p.api()?.toFaNumber?.(String(tasks.length)) || String(tasks.length);
         header.setAttribute('aria-label', count + ' کار در پیش رو');
@@ -78,8 +98,10 @@ class ReminderCodeBlock extends MarkdownRenderChild {
             if (date) {
                 const dateBadge = E(meta, 'div', 'pr-agenda-date-badge');
                 I(dateBadge, 'calendar-days'); E(dateBadge, 'span', '', dateFa(p, date));
-                const timeBadge = E(meta, 'div', 'pr-agenda-time-badge');
-                I(timeBadge, 'clock-3'); E(timeBadge, 'span', '', clockFa(p, date));
+                if (item.hasTime) {
+                    const timeBadge = E(meta, 'div', 'pr-agenda-time-badge');
+                    I(timeBadge, 'clock-3'); E(timeBadge, 'span', '', clockFa(p, date));
+                }
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const dueDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
                 const days = Math.round((dueDay - today) / 86400000);
@@ -135,6 +157,7 @@ module.exports = class PersianReminder extends Plugin {
         this.settings.remainingColors = Object.fromEntries(Object.keys(DEFAULTS.remainingColors).map(key =>
             [key, { ...DEFAULTS.remainingColors[key], ...(this.settings.remainingColors?.[key] || {}) }]));
         this.index = new Map();
+        this.agendaIndex = new Map();
         this.codeBlockRenderers = new Map();
         this.scanSerial = new Map();
         this.scanTimers = new Map();
@@ -158,8 +181,8 @@ module.exports = class PersianReminder extends Plugin {
             this.scan(file); }));
         this.registerEvent(this.app.vault.on('create', file => { if (file instanceof TFile && file.extension === 'md')
             this.scan(file); }));
-        this.registerEvent(this.app.vault.on('delete', file => { this.index.delete(file.path); this.refresh(); }));
-        this.registerEvent(this.app.vault.on('rename', (file, old) => { this.index.delete(old); if (file instanceof TFile && file.extension === 'md')
+        this.registerEvent(this.app.vault.on('delete', file => { this.index.delete(file.path); this.agendaIndex.delete(file.path); this.refresh(); }));
+        this.registerEvent(this.app.vault.on('rename', (file, old) => { this.index.delete(old); this.agendaIndex.delete(old); if (file instanceof TFile && file.extension === 'md')
             this.scan(file); this.refresh(); }));
         this.registerEvent(this.app.workspace.on('editor-change', (editor, view) => { if (!view?.file)
             return; const path = view.file.path; if (this.scanTimers.has(path))
@@ -228,7 +251,7 @@ module.exports = class PersianReminder extends Plugin {
         new Notice('یادداشت باز پیدا نشد'); }
     openTask(path, line, raw) { const item = parseTask(this, raw); if (!item || !path)
         return new Notice('یک تسک انتخاب کنید'); this.edit({ ...item, path, line }); }
-    async scanAll() { this.index.clear(); const files = this.app.vault.getMarkdownFiles(); for (let i = 0; i < files.length; i += 10)
+    async scanAll() { this.index.clear(); this.agendaIndex.clear(); const files = this.app.vault.getMarkdownFiles(); for (let i = 0; i < files.length; i += 10)
         await Promise.all(files.slice(i, i + 10).map(f => this.scan(f, false))); this.refresh(); }
     async scan(file, refresh = true) { if (!(file instanceof TFile) || file.extension !== 'md')
         return; const token = (this.scanSerial.get(file.path) || 0) + 1; this.scanSerial.set(file.path, token); try {
@@ -240,9 +263,11 @@ module.exports = class PersianReminder extends Plugin {
     catch (e) {
         console.error('[Persian Reminder scan]', e);
     } }
-    indexText(path, source, refresh = true) { const arr = []; source.split(/\r?\n/).forEach((raw, line) => { const it = parseTask(this, raw); if (it?.at)
-        arr.push({ ...it, path, line }); }); this.index.set(path, arr); this.scheduler?.wake(); if (refresh)
+    indexText(path, source, refresh = true) { const arr = [], agenda = []; source.split(/\r?\n/).forEach((raw, line) => { const it = parseTask(this, raw); if (it?.at)
+        arr.push({ ...it, path, line }); const upcoming = parseAgendaTask(this, raw, path, line); if (upcoming)
+        agenda.push(upcoming); }); this.index.set(path, arr); this.agendaIndex.set(path, agenda); this.scheduler?.wake(); if (refresh)
         this.refresh(); }
+    agendaItems() { return [...this.agendaIndex.values()].flat(); }
     items() { return [...this.index.values()].flat().sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at)); }
     refresh() { for (const type of [SIDE, DASH])
         for (const leaf of this.app.workspace.getLeavesOfType(type)) {
