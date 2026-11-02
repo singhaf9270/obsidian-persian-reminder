@@ -46,24 +46,57 @@ class ReminderCodeBlock extends MarkdownRenderChild {
     render() {
         const p = this.plugin, root = this.containerEl;
         root.replaceChildren();
-        root.classList.add('pr-root', 'pr-code-block');
-        const header = E(root, 'div', 'pr-code-block-header');
-        const heading = E(header, 'div', 'pr-code-block-heading');
-        E(heading, 'strong', '', 'یادآوری‌های این یادداشت');
-        const tasks = (p.index.get(this.sourcePath) || []).slice()
-            .sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at));
-        E(heading, 'small', '', p.api() ? tasks.length + ' یادآوری' : 'برای نمایش تاریخ شمسی، Persian Calendar را فعال کنید');
-        B(header, 'افزودن یادآوری', 'plus', 'pr-quiet-btn', () => {
-            if (!p.api()) return new Notice('افزونه Persian Calendar فعال نیست');
-            const modal = new TaskModal(p);
-            modal.destination = this.sourcePath;
-            modal.open();
+        root.classList.add('pr-root', 'pr-agenda-widget');
+        const header = E(root, 'div', 'pr-agenda-header');
+        E(header, 'span', 'pr-agenda-mark', '📋');
+        const heading = E(header, 'div', 'pr-agenda-heading');
+        E(heading, 'strong', '', 'برنامهٔ پیش رو');
+        const now = new Date();
+        const tasks = p.items().filter(item => {
+            const due = fromISO(item.at);
+            return !item.done && due && due.getTime() >= now.getTime();
+        }).sort((a, b) => a.at.localeCompare(b.at));
+        const count = p.api()?.toFaNumber?.(String(tasks.length)) || String(tasks.length);
+        E(heading, 'small', '', count + ' کار در پیش رو');
+        const list = E(root, 'div', 'pr-agenda-list');
+        if (!tasks.length) {
+            const state = E(list, 'div', 'pr-agenda-empty');
+            E(state, 'span', 'pr-agenda-empty-icon', '🌿');
+            E(state, 'strong', '', 'فعلاً کاری در پیش نیست');
+            E(state, 'small', '', 'یادآوری‌های امروز و روزهای آینده اینجا نمایش داده می‌شوند.');
+            return;
+        }
+        tasks.forEach(item => {
+            const card = E(list, 'article', 'pr-agenda-card');
+            card.tabIndex = 0;
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', 'بازکردن یادداشت: ' + (item.title || 'بدون عنوان'));
+            const open = () => p.openFile(item);
+            card.addEventListener('click', open);
+            card.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+            });
+            const top = E(card, 'div', 'pr-agenda-card-top');
+            E(top, 'span', 'pr-agenda-check', '○');
+            E(top, 'div', 'pr-agenda-title', item.title || 'بدون عنوان');
+            const meta = E(card, 'div', 'pr-agenda-meta'), date = fromISO(item.at);
+            if (date) {
+                const dateBadge = E(meta, 'span', 'pr-agenda-date');
+                I(dateBadge, 'calendar-days'); E(dateBadge, 'span', '', dateFa(p, date));
+                const timeBadge = E(meta, 'span', 'pr-agenda-time');
+                I(timeBadge, 'clock-3'); E(timeBadge, 'span', '', clockFa(p, date));
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const dueDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                const days = Math.round((dueDay - today) / 86400000);
+                const label = days === 0 ? 'امروز' : days === 1 ? 'فردا' :
+                    (p.api()?.toFaNumber?.(String(days)) || String(days)) + ' روز دیگر';
+                const badge = E(meta, 'span', 'pr-agenda-remaining', label);
+                badge.classList.add(days === 0 ? 'is-today' : days === 1 ? 'is-tomorrow' : 'is-future');
+            }
+            const source = E(card, 'div', 'pr-agenda-source');
+            I(source, 'file-text');
+            E(source, 'span', '', item.path.split('/').pop().replace(/\.md$/i, ''));
         });
-        const list = E(root, 'div', 'pr-code-block-list');
-        if (!tasks.length)
-            empty(list, 'هنوز یادآوری‌ای در این یادداشت ثبت نشده است');
-        else
-            tasks.forEach(item => taskCard(p, list, item));
     }
 }
 
