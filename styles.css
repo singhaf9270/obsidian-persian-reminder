@@ -883,7 +883,6 @@
 .pr-material-instructions { font-size: .9em; }
 .pr-root .pr-note-path, .pr-root .pr-day-destination { line-height: 1.8; }
 
-
 /* Note-level reminder code block. */
 .pr-code-block { display: flex; flex-direction: column; gap: 12px; margin-block: 12px; padding: 14px; border: 1px solid var(--pr-edge); border-radius: 14px; background: var(--pr-layer); }
 .pr-code-block-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
