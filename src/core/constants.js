@@ -29,6 +29,7 @@ const DEFAULTS = {
   taskStyle: 'soft',
   stampStyle: 'soft',
   inlineTextColor: '#182e3a',
+  taskTextColor: '',
   badgeColors: { inline: {a:'#67D5ED',b:'#A5B4FC',border:'#478EBB'}, date:{a:'#93C5FD',b:'#BAE6FD',border:'#548BCB'}, remaining:{a:'#6EE7B7',b:'#A7F3D0',border:'#39A781'} },
   gradientAngle: 120,
   cardTint: 10,
