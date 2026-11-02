@@ -41,24 +41,57 @@ class ReminderCodeBlock extends MarkdownRenderChild {
     render() {
         const p = this.plugin, root = this.containerEl;
         root.replaceChildren();
-        root.classList.add('pr-root', 'pr-code-block');
-        const header = E(root, 'div', 'pr-code-block-header');
-        const heading = E(header, 'div', 'pr-code-block-heading');
-        E(heading, 'strong', '', 'یادآوری‌های این یادداشت');
-        const tasks = (p.index.get(this.sourcePath) || []).slice()
-            .sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at));
-        E(heading, 'small', '', p.api() ? tasks.length + ' یادآوری' : 'برای نمایش تاریخ شمسی، Persian Calendar را فعال کنید');
-        B(header, 'افزودن یادآوری', 'plus', 'pr-quiet-btn', () => {
-            if (!p.api()) return new Notice('افزونه Persian Calendar فعال نیست');
-            const modal = new TaskModal(p);
-            modal.destination = this.sourcePath;
-            modal.open();
+        root.classList.add('pr-root', 'pr-agenda-widget');
+        const header = E(root, 'div', 'pr-agenda-header');
+        E(header, 'span', 'pr-agenda-mark', '📋');
+        const heading = E(header, 'div', 'pr-agenda-heading');
+        E(heading, 'strong', '', 'برنامهٔ پیش رو');
+        const now = new Date();
+        const tasks = p.items().filter(item => {
+            const due = fromISO(item.at);
+            return !item.done && due && due.getTime() >= now.getTime();
+        }).sort((a, b) => a.at.localeCompare(b.at));
+        const count = p.api()?.toFaNumber?.(String(tasks.length)) || String(tasks.length);
+        E(heading, 'small', '', count + ' کار در پیش رو');
+        const list = E(root, 'div', 'pr-agenda-list');
+        if (!tasks.length) {
+            const state = E(list, 'div', 'pr-agenda-empty');
+            E(state, 'span', 'pr-agenda-empty-icon', '🌿');
+            E(state, 'strong', '', 'فعلاً کاری در پیش نیست');
+            E(state, 'small', '', 'یادآوری‌های امروز و روزهای آینده اینجا نمایش داده می‌شوند.');
+            return;
+        }
+        tasks.forEach(item => {
+            const card = E(list, 'article', 'pr-agenda-card');
+            card.tabIndex = 0;
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', 'بازکردن یادداشت: ' + (item.title || 'بدون عنوان'));
+            const open = () => p.openFile(item);
+            card.addEventListener('click', open);
+            card.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+            });
+            const top = E(card, 'div', 'pr-agenda-card-top');
+            E(top, 'span', 'pr-agenda-check', '○');
+            E(top, 'div', 'pr-agenda-title', item.title || 'بدون عنوان');
+            const meta = E(card, 'div', 'pr-agenda-meta'), date = fromISO(item.at);
+            if (date) {
+                const dateBadge = E(meta, 'span', 'pr-agenda-date');
+                I(dateBadge, 'calendar-days'); E(dateBadge, 'span', '', dateFa(p, date));
+                const timeBadge = E(meta, 'span', 'pr-agenda-time');
+                I(timeBadge, 'clock-3'); E(timeBadge, 'span', '', clockFa(p, date));
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const dueDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                const days = Math.round((dueDay - today) / 86400000);
+                const label = days === 0 ? 'امروز' : days === 1 ? 'فردا' :
+                    (p.api()?.toFaNumber?.(String(days)) || String(days)) + ' روز دیگر';
+                const badge = E(meta, 'span', 'pr-agenda-remaining', label);
+                badge.classList.add(days === 0 ? 'is-today' : days === 1 ? 'is-tomorrow' : 'is-future');
+            }
+            const source = E(card, 'div', 'pr-agenda-source');
+            I(source, 'file-text');
+            E(source, 'span', '', item.path.split('/').pop().replace(/\.md$/i, ''));
         });
-        const list = E(root, 'div', 'pr-code-block-list');
-        if (!tasks.length)
-            empty(list, 'هنوز یادآوری‌ای در این یادداشت ثبت نشده است');
-        else
-            tasks.forEach(item => taskCard(p, list, item));
     }
 }
 
@@ -76,21 +109,21 @@ class UpdateNotice extends Modal {
         E(title, 'strong', '', 'تازه‌های Persian Reminder');
         E(title, 'small', '', 'نسخهٔ ۱.۰.۹');
         const body = E(root, 'div', 'pr-modal-body pr-update-body');
-        E(body, 'p', 'pr-update-intro', 'در این نسخه، یادآوری‌ها به متن یادداشت‌ها نزدیک‌تر شده‌اند؛ حالا می‌توانید برنامه‌ها و کارهای هر یادداشت را همان‌جا ببینید و مدیریت کنید.');
+        E(body, 'p', 'pr-update-intro', 'در این نسخه می‌توانید برنامهٔ پیش رو را از تمام یادداشت‌های ولت، یک‌جا و با ظاهری شبیه یک فهرست برنامه‌ریزی مرتب ببینید.');
         const feature = E(body, 'article', 'pr-update-feature');
         E(feature, 'span', 'pr-update-kicker', 'قابلیت جدید');
-        E(feature, 'h3', '', 'ویجت یادآوری داخل هر یادداشت');
-        E(feature, 'p', '', 'با قرار دادن بلوک کد persian-reminder در یک یادداشت، فهرست یادآوری‌های همان یادداشت نمایش داده می‌شود؛ بدون ساخت فایل جداگانه یا ذخیره‌سازی تکراری.');
+        E(feature, 'h3', '', 'برنامهٔ پیش رو در هر یادداشت');
+        E(feature, 'p', '', 'بلوک کد persian-reminder را در هر یادداشتی بگذارید تا همهٔ یادآوری‌های فعال و آیندهٔ کل ولت نمایش داده شوند؛ حتی اگر یادآوری در فایل دیگری ثبت شده باشد.');
         const code = E(feature, 'code', 'pr-update-code', '```persian-reminder\n```');
         code.setAttribute('dir', 'ltr');
         const list = E(body, 'ul', 'pr-update-list');
         for (const text of [
-            'نمایش یادآوری‌های مرتبط با همان یادداشت، همراه با زمان سررسید و وضعیت آن‌ها.',
-            'مرتب‌سازی یادآوری‌ها بر اساس موعد و تفکیک کارهای انجام‌شده.',
-            'افزودن یادآوری جدید از داخل ویجت و ثبت مستقیم آن در همان یادداشت.',
-            'به‌روزرسانی خودکار ویجت پس از تغییر یادآوری‌ها.'
+            'خواندن یادآوری‌ها از تمام یادداشت‌های Markdown ولت، نه فقط یادداشت میزبان بلوک کد.',
+            'نمایش کارهای انجام‌نشدهٔ امروز و آینده با مرتب‌سازی بر اساس زمان سررسید.',
+            'نمایش تاریخ شمسی، ساعت، برچسب امروز/فردا/روزهای آینده و نام یادداشت مبدأ.',
+            'بازکردن یادداشت اصلی با انتخاب هر کارت و به‌روزرسانی خودکار پس از تغییر یادآوری‌ها.'
         ]) E(list, 'li', '', text);
-        E(body, 'p', 'pr-update-footnote', 'برای استفاده، یک بلوک کد با زبان persian-reminder در یادداشت قرار دهید. افزونهٔ Persian Calendar نیز باید فعال باشد.');
+        E(body, 'p', 'pr-update-footnote', 'برای استفاده، یک بلوک کد با زبان persian-reminder در هر یادداشتی قرار دهید. برای نمایش تاریخ شمسی، Persian Calendar باید فعال باشد.');
         const footer = E(root, 'div', 'pr-modal-footer');
         B(footer, 'متوجه شدم', 'check', 'pr-save-btn', () => this.close());
     }
