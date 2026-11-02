@@ -1,3 +1,16 @@
+## Persian Reminder 1.0.8
+
+- Add a `persian-reminder` code block to display reminders belonging to the current note.
+- Add reminders directly from the note-level widget, keeping the current note as the destination.
+- Refresh note widgets when reminder data changes.
+- Update test fixtures and generated stylesheet bundle for the new widget.
+
+### فارسی
+
+- افزودن ویجت یادآوری به هر یادداشت با بلوک کد `persian-reminder`.
+- نمایش یادآوری‌های همان یادداشت همراه با امکان افزودن یادآوری جدید.
+- به‌روزرسانی خودکار ویجت پس از تغییر یادآوری‌ها.
+
 ## Persian Reminder 1.0.7
 
 - Restored the original channel logo artwork, including YouTube's white play symbol.
