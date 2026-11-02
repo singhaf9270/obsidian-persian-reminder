@@ -7,7 +7,7 @@ class TFile { constructor(path) { this.path = path; this.extension = 'md'; } }
 class MarkdownView {}
 const messages = [];
 const obsidian = {
-    Plugin: class {}, Modal: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {},
+    Plugin: class {}, MarkdownRenderChild: class { constructor(containerEl) { this.containerEl = containerEl; } }, Modal: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {},
     Notice: class { constructor(message) { messages.push(message); } },
     TFile, MarkdownView, Platform: { isMobile: false }, setIcon() {}
 };
