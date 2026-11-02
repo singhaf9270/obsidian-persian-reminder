@@ -6,7 +6,7 @@ let time = new Date(2026, 9, 24, 10, 0, 59).getTime();
 class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [time])); } static now() { return time; } }
 const document = { hidden: false };
 const result = { exports: {} };
-const obsidian = { Plugin: class {}, Modal: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {},
+const obsidian = { Plugin: class {}, MarkdownRenderChild: class { constructor(containerEl) { this.containerEl = containerEl; } }, Modal: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {},
     Notice: class {}, TFile: class {}, MarkdownView: class {}, Platform: { isMobile: false } };
 const external = id => {
     if (id === 'obsidian') return obsidian;
