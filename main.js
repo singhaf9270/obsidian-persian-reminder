@@ -4,7 +4,7 @@ const __prNativeRequire = require;
 const __prModules = {
 "src/main.js": function(module, exports, require) {
 // Application entry point: lifecycle, vault index, notifications and commands.
-const { Plugin, Notice, MarkdownView, TFile, Platform } = require('obsidian');
+const { Plugin, Notice, MarkdownView, MarkdownRenderChild, TFile, Platform } = require('obsidian');
 const { SIDE, DASH, DEFAULTS, PALETTES, TASK, PLACE } = require("src/core/constants.js");
 const { cssColor, parseTask, buildTask, status, paintTask } = require("src/core/tasks.js");
 const { fromISO, dateFa, clockFa } = require("src/core/dates.js");
@@ -18,6 +18,53 @@ const { gradientAngle, cardTint, contrastText } = require("src/core/appearance.j
 const { Sidebar } = require("src/views/sidebar.js");
 const { Dashboard } = require("src/views/dashboard.js");
 const { SettingsTab } = require("src/settings.js");
+const { empty, taskCard } = require("src/ui/task-card.js");
+
+class ReminderCodeBlock extends MarkdownRenderChild {
+    constructor(plugin, el, sourcePath) {
+        super(el);
+        this.plugin = plugin;
+        this.sourcePath = sourcePath;
+    }
+    onload() {
+        const p = this.plugin;
+        if (!p.codeBlockRenderers.has(this.sourcePath))
+            p.codeBlockRenderers.set(this.sourcePath, new Set());
+        p.codeBlockRenderers.get(this.sourcePath).add(this.render);
+        this.render();
+        const file = p.app.vault.getAbstractFileByPath(this.sourcePath);
+        if (file instanceof TFile)
+            p.scan(file);
+    }
+    onunload() {
+        const renderers = this.plugin.codeBlockRenderers.get(this.sourcePath);
+        if (!renderers) return;
+        renderers.delete(this.render);
+        if (!renderers.size) this.plugin.codeBlockRenderers.delete(this.sourcePath);
+    }
+    render() {
+        const p = this.plugin, root = this.containerEl;
+        root.replaceChildren();
+        root.classList.add('pr-root', 'pr-code-block');
+        const header = E(root, 'div', 'pr-code-block-header');
+        const heading = E(header, 'div', 'pr-code-block-heading');
+        E(heading, 'strong', '', 'یادآوری‌های این یادداشت');
+        const tasks = (p.index.get(this.sourcePath) || []).slice()
+            .sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at));
+        E(heading, 'small', '', p.api() ? tasks.length + ' یادآوری' : 'برای نمایش تاریخ شمسی، Persian Calendar را فعال کنید');
+        B(header, 'افزودن یادآوری', 'plus', 'pr-quiet-btn', () => {
+            const modal = new TaskModal(p);
+            modal.destination = this.sourcePath;
+            modal.open();
+        });
+        const list = E(root, 'div', 'pr-code-block-list');
+        if (!tasks.length)
+            empty(list, 'هنوز یادآوری‌ای در این یادداشت ثبت نشده است');
+        else
+            tasks.forEach(item => taskCard(p, list, item));
+    }
+}
+
 module.exports = class PersianReminder extends Plugin {
     async onload() {
         this.settings = { ...DEFAULTS, ...await this.loadData() };
@@ -28,6 +75,7 @@ module.exports = class PersianReminder extends Plugin {
         this.settings.remainingColors = Object.fromEntries(Object.keys(DEFAULTS.remainingColors).map(key =>
             [key, { ...DEFAULTS.remainingColors[key], ...(this.settings.remainingColors?.[key] || {}) }]));
         this.index = new Map();
+        this.codeBlockRenderers = new Map();
         this.scanSerial = new Map();
         this.scanTimers = new Map();
         this.unloading = false;
@@ -43,6 +91,9 @@ module.exports = class PersianReminder extends Plugin {
         this.addCommand({ id: 'new-task', name: 'افزودن کار', callback: () => this.create() });
         this.addCommand({ id: 'edit-current-task', name: 'یادآوری تسک فعلی', editorCallback: (editor, view) => { this.openTask(view.file?.path, editor.getCursor().line, editor.getLine(editor.getCursor().line)); } });
         this.registerMarkdownPostProcessor((element, ctx) => this.reading(element, ctx));
+        this.registerMarkdownCodeBlockProcessor('persian-reminder', (source, el, ctx) => {
+            ctx.addChild(new ReminderCodeBlock(this, el, ctx.sourcePath));
+        });
         this.registerEvent(this.app.vault.on('modify', file => { if (file instanceof TFile && file.extension === 'md')
             this.scan(file); }));
         this.registerEvent(this.app.vault.on('create', file => { if (file instanceof TFile && file.extension === 'md')
@@ -129,7 +180,10 @@ module.exports = class PersianReminder extends Plugin {
         for (const leaf of this.app.workspace.getLeavesOfType(type)) {
             if (leaf.view.refresh) leaf.view.refresh();
             else leaf.view.render?.();
-        } }
+        }
+        for (const renderers of this.codeBlockRenderers.values())
+            for (const render of renderers) render();
+    }
     findLine(lines, item) { if (lines[item.line] === item.raw)
         return item.line; const hits = []; lines.forEach((l, i) => { if (l === item.raw)
         hits.push(i); }); return hits.length === 1 ? hits[0] : -1; }
