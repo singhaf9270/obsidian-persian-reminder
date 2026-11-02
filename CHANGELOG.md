@@ -1,3 +1,19 @@
+## Persian Reminder 1.0.12
+
+### فارسی
+
+- افزودن انتخابگر رنگ متن کارها به بخش «ظاهر» تنظیمات؛ رنگ عنوان کارها را می‌توان مستقل از رنگ کارت‌ها تغییر داد.
+- اعمال زندهٔ رنگ متن روی عنوان کارها در کارت‌های سایدبار، داشبورد، حالت ویرایش و حالت مطالعه.
+- افزودن امکان بازگشت به رنگ پیش‌فرض تم Obsidian؛ در حالت پیش‌فرض، رنگ متن با تم روشن و تاریک هماهنگ می‌ماند.
+- افزودن دکمهٔ کوچک «تازه‌ها» در بالای تنظیمات برای دسترسی سریع به شرح تغییرات نسخه.
+
+### English
+
+- Add a task-title text color picker to Appearance settings.
+- Apply the selected color live across sidebar cards, dashboard cards, Editing view and Reading view.
+- Add a one-click reset to the active Obsidian theme's default text color.
+- Add a compact What's New shortcut at the top of plugin settings.
+
 ## Persian Reminder 1.0.11
 
 ### فارسی
