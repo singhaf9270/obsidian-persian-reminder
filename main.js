@@ -2629,7 +2629,6 @@ function renderCreatorSupport(container, language) {
   button.textContent = fa ? 'حمایت مالی ↗' : 'Donate ↗';
 }
 
-
 }
 };
 const __prCache = Object.create(null);
