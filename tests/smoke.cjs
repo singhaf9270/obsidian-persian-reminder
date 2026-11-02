@@ -32,7 +32,7 @@ assert.equal(buildTask(mockPlugin,null,{title:'جلسه',tags:['مهم'],place:'
 assert.equal(tagColor(mockPlugin,{tags:['عادی']}),null);
 
 const fakeObsidian = {
-  Plugin: class {}, Modal: class {}, ItemView: class {}, Notice: class {},
+  Plugin: class {}, MarkdownRenderChild: class { constructor(containerEl) { this.containerEl = containerEl; } }, Modal: class {}, ItemView: class {}, Notice: class {},
   MarkdownView: class {}, PluginSettingTab: class {}, Setting: class {},
   TFile: class {}, Platform: {isMobile:false}, setIcon:()=>{}
 };
