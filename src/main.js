@@ -181,8 +181,8 @@ module.exports = class PersianReminder extends Plugin {
             this.scan(file); }));
         this.registerEvent(this.app.vault.on('create', file => { if (file instanceof TFile && file.extension === 'md')
             this.scan(file); }));
-        this.registerEvent(this.app.vault.on('delete', file => { this.index.delete(file.path); this.agendaIndex.delete(file.path); this.refresh(); }));
-        this.registerEvent(this.app.vault.on('rename', (file, old) => { this.index.delete(old); this.agendaIndex.delete(old); if (file instanceof TFile && file.extension === 'md')
+        this.registerEvent(this.app.vault.on('delete', file => { this.index.delete(file.path); this.agendaIndex?.delete(file.path); this.refresh(); }));
+        this.registerEvent(this.app.vault.on('rename', (file, old) => { this.index.delete(old); this.agendaIndex?.delete(old); if (file instanceof TFile && file.extension === 'md')
             this.scan(file); this.refresh(); }));
         this.registerEvent(this.app.workspace.on('editor-change', (editor, view) => { if (!view?.file)
             return; const path = view.file.path; if (this.scanTimers.has(path))
@@ -251,7 +251,7 @@ module.exports = class PersianReminder extends Plugin {
         new Notice('یادداشت باز پیدا نشد'); }
     openTask(path, line, raw) { const item = parseTask(this, raw); if (!item || !path)
         return new Notice('یک تسک انتخاب کنید'); this.edit({ ...item, path, line }); }
-    async scanAll() { this.index.clear(); this.agendaIndex.clear(); const files = this.app.vault.getMarkdownFiles(); for (let i = 0; i < files.length; i += 10)
+    async scanAll() { this.index.clear(); this.agendaIndex ||= new Map(); this.agendaIndex.clear(); const files = this.app.vault.getMarkdownFiles(); for (let i = 0; i < files.length; i += 10)
         await Promise.all(files.slice(i, i + 10).map(f => this.scan(f, false))); this.refresh(); }
     async scan(file, refresh = true) { if (!(file instanceof TFile) || file.extension !== 'md')
         return; const token = (this.scanSerial.get(file.path) || 0) + 1; this.scanSerial.set(file.path, token); try {
@@ -264,6 +264,7 @@ module.exports = class PersianReminder extends Plugin {
         console.error('[Persian Reminder scan]', e);
     } }
     indexText(path, source, refresh = true) {
+        this.agendaIndex ||= new Map();
         const arr = [], agenda = [];
         let fenceChar = null, fenceLength = 0;
         source.split(/\r?\n/).forEach((raw, line) => {
@@ -285,7 +286,7 @@ module.exports = class PersianReminder extends Plugin {
         this.scheduler?.wake();
         if (refresh) this.refresh();
     }
-    agendaItems() { return [...this.agendaIndex.values()].flat(); }
+    agendaItems() { this.agendaIndex ||= new Map(); return [...this.agendaIndex.values()].flat(); }
     items() { return [...this.index.values()].flat().sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at)); }
     refresh() { for (const type of [SIDE, DASH])
         for (const leaf of this.app.workspace.getLeavesOfType(type)) {
