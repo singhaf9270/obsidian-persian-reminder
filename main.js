@@ -2118,7 +2118,7 @@ class SettingsTab extends PluginSettingTab {
         navigation.setAttribute('aria-label', 'بخش‌های تنظیمات');
         this.navButtons = new Map();
         for (const [key, title, icon] of [
-            ['general', 'عمومی', 'settings-2'], ['daily', 'یادداشت روز', 'folder-open'],
+            ['updates', 'تازه‌های نسخه', 'sparkles'], ['general', 'عمومی', 'settings-2'], ['daily', 'یادداشت روز', 'folder-open'],
             ['appearance', 'ظاهر', 'palette'], ['tags', 'هشتگ‌ها', 'hash']
         ]) this.navButtons.set(key, B(navigation, title, icon, 'pr-settings-nav-button', () => this.showPage(key)));
         this.pageEl = E(root, 'div', 'pr-settings-page');
@@ -2135,6 +2135,26 @@ class SettingsTab extends PluginSettingTab {
         this.previewPaint = null;
         this.pageEl.replaceChildren();
         this[page]();
+    }
+    updates() {
+        const p = this.p;
+        const section = this.section('تازه‌های نسخهٔ ۱.۰.۹', 'مرور تغییراتی که در این نسخه به Persian Reminder اضافه شده‌اند.');
+        const card = E(section, 'article', 'pr-settings-update-card');
+        E(card, 'span', 'pr-update-kicker', 'نسخهٔ ۱.۰.۹');
+        E(card, 'h3', '', 'برنامهٔ پیش رو؛ از تمام یادداشت‌های ولت');
+        E(card, 'p', '', 'بلوک کد persian-reminder در هر یادداشتی، فهرست یکپارچهٔ یادآوری‌های فعال و آیندهٔ کل ولت را نمایش می‌دهد؛ حتی اگر کارها در یادداشت‌های دیگری ثبت شده باشند.');
+        const code = E(card, 'code', 'pr-update-code', '```persian-reminder\\n```');
+        code.setAttribute('dir', 'ltr');
+        const list = E(card, 'ul', 'pr-update-list');
+        for (const text of [
+            'جست‌وجوی یادآوری‌ها در تمام فایل‌های Markdown ولت و نمایش آن‌ها در یک فهرست واحد.',
+            'نمایش کارهای انجام‌نشدهٔ امروز و آینده؛ کارهای گذشته و تکمیل‌شده در این ویجت نشان داده نمی‌شوند.',
+            'کارت‌هایی با تاریخ شمسی، ساعت، برچسب امروز/فردا/روزهای آینده و نام یادداشت مبدأ.',
+            'با انتخاب هر کارت، یادداشت اصلی و خط مربوط به آن باز می‌شود؛ فهرست با تغییر کارها تازه می‌شود.'
+        ]) E(list, 'li', '', text);
+        E(card, 'p', 'pr-update-footnote', 'این ویجت از ایندکس اصلی Persian Reminder استفاده می‌کند و دادهٔ جداگانه‌ای نمی‌سازد. برای تاریخ شمسی، Persian Calendar باید فعال باشد.');
+        new Setting(section).setName('نمایش دوبارهٔ پیام به‌روزرسانی').setDesc('اگر پیام معرفی نسخه را بستید، می‌توانید آن را دوباره باز کنید.')
+            .addButton(button => button.setButtonText('نمایش پیام').onClick(() => p.showUpdateNotice(true)));
     }
     section(title, description) {
         const root = E(this.pageEl, 'section', 'pr-setting-section');
