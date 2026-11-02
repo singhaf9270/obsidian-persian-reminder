@@ -98,30 +98,28 @@ class UpdateNotice extends Modal {
     onOpen() {
         this.modalEl.addClass('pr-modal', 'pr-update-modal');
         this.modalEl.setAttribute('role', 'dialog');
-        this.modalEl.setAttribute('aria-label', 'تغییرات نسخه ۱.۰.۱۱');
+        this.modalEl.setAttribute('aria-label', 'تغییرات نسخه ۱.۰.۱۲');
         const root = this.contentEl;
         root.replaceChildren();
         const header = E(root, 'div', 'pr-modal-header');
         I(header, 'sparkles');
         const title = E(header, 'div');
         E(title, 'strong', '', 'تازه‌های Persian Reminder');
-        E(title, 'small', '', 'نسخهٔ ۱.۰.۱۱');
+        E(title, 'small', '', 'نسخهٔ ۱.۰.۱۲');
         const body = E(root, 'div', 'pr-modal-body pr-update-body');
-        E(body, 'p', 'pr-update-intro', 'در این نسخه می‌توانید برنامهٔ پیش رو را از تمام یادداشت‌های ولت، یک‌جا و با ظاهری شبیه یک فهرست برنامه‌ریزی مرتب ببینید.');
+        E(body, 'p', 'pr-update-intro', 'در این نسخه کنترل بیشتری روی ظاهر نوشته‌های کارها دارید و دسترسی به شرح تغییرات هم ساده‌تر شده است.');
         const feature = E(body, 'article', 'pr-update-feature');
         E(feature, 'span', 'pr-update-kicker', 'قابلیت جدید');
-        E(feature, 'h3', '', 'برنامهٔ پیش رو در هر یادداشت');
-        E(feature, 'p', '', 'بلوک کد persian-reminder را در هر یادداشتی بگذارید تا همهٔ وظایف تیک‌نخوردهٔ دارای نشانگر تاریخ از کل ولت نمایش داده شوند؛ حتی اگر در فایل دیگری ثبت شده باشند.');
-        const code = E(feature, 'code', 'pr-update-code', '```persian-reminder\n```');
-        code.setAttribute('dir', 'ltr');
+        E(feature, 'h3', '', 'انتخاب رنگ متن کارها');
+        E(feature, 'p', '', 'در تنظیمات ظاهر، رنگ دلخواه عنوان کارها را انتخاب کنید. رنگ انتخابی در کارت‌های سایدبار و داشبورد و همچنین نمایش تسک‌ها در حالت ویرایش و مطالعه اعمال می‌شود.');
         const list = E(body, 'ul', 'pr-update-list');
         for (const text of [
-            'خواندن وظایف تیک‌نخوردهٔ دارای نشانگر تاریخ از تمام یادداشت‌های Markdown ولت؛ ساعت اختیاری است.',
-            'نمایش کارهای انجام‌نشدهٔ امروز و آینده با مرتب‌سازی بر اساس زمان سررسید.',
-            'نمایش تاریخ شمسی، ساعت در صورت ثبت، و برچسب امروز/فردا/روزهای آینده.',
-            'بازکردن یادداشت اصلی با انتخاب هر کارت و به‌روزرسانی خودکار پس از تغییر یادآوری‌ها.'
+            'انتخاب رنگ دلخواه برای نوشتهٔ عنوان کارها از بخش ظاهر تنظیمات.',
+            'به‌روزرسانی زندهٔ رنگ در کارت‌ها، سایدبار، داشبورد و نمایش تسک‌ها در حالت ویرایش و مطالعه.',
+            'بازگشت به رنگ پیش‌فرض تم Obsidian با یک کلیک.',
+            'دکمهٔ کوچک «تازه‌ها» در بالای تنظیمات برای بازکردن همین صفحه.'
         ]) E(list, 'li', '', text);
-        E(body, 'p', 'pr-update-footnote', 'برای استفاده، یک بلوک کد با زبان persian-reminder در هر یادداشتی قرار دهید. برای نمایش تاریخ شمسی، Persian Calendar باید فعال باشد.');
+        E(body, 'p', 'pr-update-footnote', 'اگر رنگ سفارشی انتخاب نکنید، افزونه از رنگ متن تم فعال Obsidian استفاده می‌کند.');
         const footer = E(root, 'div', 'pr-modal-footer');
         B(footer, 'متوجه شدم', 'check', 'pr-save-btn', () => this.close());
     }
@@ -178,9 +176,9 @@ module.exports = class PersianReminder extends Plugin {
         });
     }
     onunload() { this.unloading = true; this.scheduler?.stop(); this.alertModal?.close(); for (const timer of this.scanTimers.values())
-        window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-gradient-angle', '--pr-card-tint', '--pr-accent-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border','text'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
+        window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-gradient-angle', '--pr-card-tint', '--pr-accent-color', '--pr-task-text-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border','text'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
     async showUpdateNotice(force = false) {
-        const version = '1.0.11';
+        const version = '1.0.12';
         if (!force && this.settings.lastSeenVersion === version) return;
         this.settings.lastSeenVersion = version;
         await this.persist();
@@ -199,6 +197,10 @@ module.exports = class PersianReminder extends Plugin {
             if (type !== 'inline') vars[`--pr-${type}-text`] = contrastText(v.a, v.b);
         }
         for (const [key, value] of Object.entries(vars)) document.body.style.setProperty(key, cssColor(value));
+        if (/^#[\da-f]{6}$/i.test(this.settings.taskTextColor || ''))
+            document.body.style.setProperty('--pr-task-text-color', this.settings.taskTextColor);
+        else
+            document.body.style.removeProperty('--pr-task-text-color');
         document.body.style.setProperty('--pr-gradient-angle', gradientAngle(this.settings) + 'deg');
         document.body.style.setProperty('--pr-card-tint', cardTint(this.settings) + '%');
         this.refresh(); this.requestEditorUpdate();
@@ -505,6 +507,7 @@ const DEFAULTS = {
   taskStyle: 'soft',
   stampStyle: 'soft',
   inlineTextColor: '#182e3a',
+  taskTextColor: '',
   badgeColors: { inline: {a:'#67D5ED',b:'#A5B4FC',border:'#478EBB'}, date:{a:'#93C5FD',b:'#BAE6FD',border:'#548BCB'}, remaining:{a:'#6EE7B7',b:'#A7F3D0',border:'#39A781'} },
   gradientAngle: 120,
   cardTint: 10,
@@ -878,8 +881,8 @@ function editorExtension(p) {
                     if (!item)
                         continue;
                     const color = tagColor(p, item);
-                    if (color)
-                        ranges.push(Decoration.line({ attributes: { class: 'pr-task-highlight pr-style-' + p.settings.taskStyle, style: `--pr-task-color:${color};` } }).range(line.from));
+                    if (color || p.settings.taskTextColor)
+                        ranges.push(Decoration.line({ attributes: { class: 'pr-task-highlight pr-style-' + p.settings.taskStyle, style: color ? `--pr-task-color:${color};` : '' } }).range(line.from));
                     if (item.marker) {
                         const start = line.from + item.marker.from, end = line.from + item.marker.to;
                         const selection = view.state.selection.ranges.some(s => s.from <= end && s.to >= start && s.from !== s.to || s.head >= start && s.head <= end);
@@ -2130,6 +2133,7 @@ class SettingsTab extends PluginSettingTab {
         const text = E(hero, 'div');
         E(text, 'h2', '', 'یادآوری، به سلیقهٔ شما');
         E(text, 'p', '', 'رفتار، مقصد یادداشت‌ها و ظاهر را از همین‌جا تنظیم کنید.');
+        B(hero, 'تازه‌ها', 'sparkles', 'pr-settings-whats-new', () => this.showPage('updates'));
         const state = E(root, 'div', 'pr-settings-status' + (this.p.api() ? ' is-connected' : ''));
         I(state, this.p.api() ? 'circle-check' : 'circle-alert');
         E(state, 'span', '', this.p.api() ? 'تقویم شمسی آماده است' : 'برای انتخاب تاریخ، Persian Calendar را فعال کنید');
@@ -2137,7 +2141,7 @@ class SettingsTab extends PluginSettingTab {
         navigation.setAttribute('aria-label', 'بخش‌های تنظیمات');
         this.navButtons = new Map();
         for (const [key, title, icon] of [
-            ['updates', 'تازه‌های نسخه', 'sparkles'], ['general', 'عمومی', 'settings-2'], ['daily', 'یادداشت روز', 'folder-open'],
+            ['general', 'عمومی', 'settings-2'], ['daily', 'یادداشت روز', 'folder-open'],
             ['appearance', 'ظاهر', 'palette'], ['tags', 'هشتگ‌ها', 'hash']
         ]) this.navButtons.set(key, B(navigation, title, icon, 'pr-settings-nav-button', () => this.showPage(key)));
         this.pageEl = E(root, 'div', 'pr-settings-page');
@@ -2157,22 +2161,20 @@ class SettingsTab extends PluginSettingTab {
     }
     updates() {
         const p = this.p;
-        const section = this.section('تازه‌های نسخهٔ ۱.۰.۹', 'مرور تغییراتی که در این نسخه به Persian Reminder اضافه شده‌اند.');
+        const section = this.section('تازه‌های نسخهٔ ۱.۰.۱۲', 'مرور تغییرات جدید Persian Reminder');
         const card = E(section, 'article', 'pr-settings-update-card');
-        E(card, 'span', 'pr-update-kicker', 'نسخهٔ ۱.۰.۹');
-        E(card, 'h3', '', 'برنامهٔ پیش رو؛ از تمام یادداشت‌های ولت');
-        E(card, 'p', '', 'بلوک کد persian-reminder در هر یادداشتی، فهرست یکپارچهٔ وظایف تیک‌نخوردهٔ دارای نشانگر تاریخ را از تمام ولت نمایش می‌دهد؛ حتی اگر کارها در یادداشت‌های دیگری ثبت شده باشند.');
-        const code = E(card, 'code', 'pr-update-code', '```persian-reminder\n```');
-        code.setAttribute('dir', 'ltr');
+        E(card, 'span', 'pr-update-kicker', 'نسخهٔ ۱.۰.۱۲');
+        E(card, 'h3', '', 'انتخاب رنگ متن کارها');
+        E(card, 'p', '', 'از بخش «ظاهر» تنظیمات می‌توانید رنگ نوشتهٔ عنوان کارها را جدا از رنگ کارت‌ها انتخاب کنید. تغییر رنگ بلافاصله در کارت‌های سایدبار، داشبورد، و نمایش تسک‌ها در حالت ویرایش و مطالعه اعمال می‌شود.');
         const list = E(card, 'ul', 'pr-update-list');
         for (const text of [
-            'خواندن وظایف تیک‌نخوردهٔ دارای نشانگر تاریخ از تمام فایل‌های Markdown ولت؛ ساعت اختیاری است.',
-            'نمایش کارهای انجام‌نشدهٔ امروز و آینده؛ کارهای گذشته و تکمیل‌شده در این ویجت نشان داده نمی‌شوند.',
-            'کارت‌هایی با تاریخ شمسی، ساعت در صورت ثبت، و برچسب امروز/فردا/روزهای آینده.',
-            'با انتخاب هر کارت، یادداشت اصلی و خط مربوط به آن باز می‌شود؛ فهرست با تغییر کارها تازه می‌شود.'
+            'افزودن انتخابگر رنگ متن با امکان انتخاب هر رنگ دلخواه.',
+            'اعمال زندهٔ رنگ انتخاب‌شده روی عنوان کارها در بخش‌های مختلف افزونه.',
+            'امکان بازگشت به رنگ پیش‌فرض تم Obsidian.',
+            'افزودن دکمهٔ کوچک «تازه‌ها» در بالای تنظیمات برای دسترسی سریع به این صفحه.'
         ]) E(list, 'li', '', text);
-        E(card, 'p', 'pr-update-footnote', 'این ویجت یادداشت‌های Markdown ولت را می‌خواند و دادهٔ جداگانه‌ای نمی‌سازد. برای تاریخ شمسی، Persian Calendar باید فعال باشد. ظاهر کارت‌ها با تم روشن و تاریک و صفحهٔ موبایل هماهنگ شده است.');
-        new Setting(section).setName('نمایش دوبارهٔ پیام به‌روزرسانی').setDesc('اگر پیام معرفی نسخه را بستید، می‌توانید آن را دوباره باز کنید.')
+        E(card, 'p', 'pr-update-footnote', 'رنگ پیش‌فرض با رنگ متن تم Obsidian هماهنگ می‌ماند؛ بنابراین با تغییر تم روشن و تاریک، خوانایی حفظ می‌شود.');
+        new Setting(section).setName('نمایش دوبارهٔ پیام به‌روزرسانی').setDesc('پیام معرفی نسخه را دوباره باز کنید.')
             .addButton(button => button.setButtonText('نمایش پیام').onClick(() => p.showUpdateNotice(true)));
     }
     section(title, description) {
@@ -2346,6 +2348,20 @@ class SettingsTab extends PluginSettingTab {
             dot.style.background = `linear-gradient(var(--pr-gradient-angle,120deg), ${palette.primary}, ${palette.secondary})`;
             E(button, 'span', 'pr-accent-name', palette.name);
         }
+        const taskTextSetting = new Setting(appearance).setName('رنگ متن کارها')
+            .setDesc('رنگ عنوان کارها در کارت‌ها و نمایش تسک‌ها؛ در حالت پیش‌فرض از رنگ متن تم Obsidian استفاده می‌شود.');
+        let taskTextPicker;
+        taskTextSetting.addColorPicker(picker => {
+            taskTextPicker = picker;
+            picker.setValue(p.settings.taskTextColor || '#182e3a').onChange(async value => {
+                p.settings.taskTextColor = value;
+                await this.save(true);
+            });
+        }).addButton(button => button.setButtonText('پیش‌فرض').setTooltip('استفاده از رنگ متن تم Obsidian').onClick(async () => {
+            p.settings.taskTextColor = '';
+            taskTextPicker?.setValue('#182e3a');
+            await this.save(true);
+        }));
         const colors = this.section('برچسب‌های تاریخ و زمان', 'پالت آماده انتخاب کنید یا جزئیات رنگ را باز کنید.');
         const presets = [
             ['اقیانوسی', '#67D5ED', '#A5B4FC', '#438FBF'], ['نعنایی', '#6EE7B7', '#A7F3D0', '#299E76'],
