@@ -1,3 +1,18 @@
+## Persian Reminder 1.0.11
+
+### فارسی
+
+- ویجت «برنامهٔ پیش‌رو» اکنون از همان کامپوننت کارت و استایل سایدبار استفاده می‌کند؛ شامل چیدمان، پس‌زمینه، حاشیه، تگ‌های بومی Obsidian، مسیر یادداشت و دکمه‌های عملیات.
+- اطلاعات مکان و هشتگ‌ها در کارت‌های ویجت مانند سایدبار نمایش داده می‌شوند.
+- تسک‌های بدون ساعت تا پایان همان روز معتبر می‌مانند و ساعت ساختگی در کارت نمایش داده نمی‌شود.
+- چیدمان ویجت در صفحه‌های باریک و موبایل از رفتار کارت‌های فشردهٔ سایدبار پیروی می‌کند.
+
+### English
+
+- Reuse the exact shared sidebar task-card component in the upcoming agenda widget.
+- Match sidebar layout, surfaces, native Obsidian tags, note path and action controls.
+- Preserve locations and hashtags, and treat date-only tasks as due at the end of the day without showing a fake time.
+
 ## Persian Reminder 1.0.10
 
 ### فارسی
