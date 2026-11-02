@@ -21,9 +21,12 @@ function taskCard(p, parent, item, compact = false) {
     name.addEventListener('click', () => p.openFile(item));
     const date = fromISO(item.at), meta = E(body, 'div', 'pr-card-meta');
     if (date) {
-        const dateLabel = dateFa(p, date) + (item.hasTime === false ? '' : ' · ' + clockFa(p, date));
-        const chip = B(meta, dateLabel, item.hasTime === false ? 'calendar-days' : 'calendar-clock', 'pr-card-date', () => p.edit(item, 'time'));
-        chip.title = item.hasTime === false ? 'تغییر تاریخ' : 'تغییر تاریخ و ساعت';
+        if (item.hasTime === false) {
+            E(meta, 'span', 'pr-card-date', dateFa(p, date));
+        } else {
+            const chip = B(meta, dateFa(p, date) + ' · ' + clockFa(p, date), 'calendar-clock', 'pr-card-date', () => p.edit(item, 'time'));
+            chip.title = 'تغییر تاریخ و ساعت';
+        }
     }
     if (date) paintRemaining(p, E(meta, 'span', 'pr-remaining'), item);
     if (item.place) {
@@ -36,13 +39,15 @@ function taskCard(p, parent, item, compact = false) {
     const footer = E(body, 'div', 'pr-note-path');
     I(footer, 'file-text');
     E(footer, 'span', '', item.path.split('/').pop());
-    const controls = E(box, 'div', 'pr-card-actions');
-    const timeBtn = B(controls, '', 'clock-3', 'pr-card-action', () => p.edit(item, 'time'));
-    timeBtn.title = 'اصلاح زمان';
-    timeBtn.setAttribute('aria-label', 'اصلاح زمان');
-    const editBtn = B(controls, '', 'pencil', 'pr-card-action', () => p.edit(item));
-    editBtn.title = 'ویرایش کار';
-    editBtn.setAttribute('aria-label', 'ویرایش کار');
+    if (item.hasTime !== false) {
+        const controls = E(box, 'div', 'pr-card-actions');
+        const timeBtn = B(controls, '', 'clock-3', 'pr-card-action', () => p.edit(item, 'time'));
+        timeBtn.title = 'اصلاح زمان';
+        timeBtn.setAttribute('aria-label', 'اصلاح زمان');
+        const editBtn = B(controls, '', 'pencil', 'pr-card-action', () => p.edit(item));
+        editBtn.title = 'ویرایش کار';
+        editBtn.setAttribute('aria-label', 'ویرایش کار');
+    }
     return box;
 }
 module.exports = { empty, taskCard };
