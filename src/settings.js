@@ -23,7 +23,7 @@ class SettingsTab extends PluginSettingTab {
         navigation.setAttribute('aria-label', 'بخش‌های تنظیمات');
         this.navButtons = new Map();
         for (const [key, title, icon] of [
-            ['general', 'عمومی', 'settings-2'], ['daily', 'یادداشت روز', 'folder-open'],
+            ['updates', 'تازه‌های نسخه', 'sparkles'], ['general', 'عمومی', 'settings-2'], ['daily', 'یادداشت روز', 'folder-open'],
             ['appearance', 'ظاهر', 'palette'], ['tags', 'هشتگ‌ها', 'hash']
         ]) this.navButtons.set(key, B(navigation, title, icon, 'pr-settings-nav-button', () => this.showPage(key)));
         this.pageEl = E(root, 'div', 'pr-settings-page');
@@ -40,6 +40,26 @@ class SettingsTab extends PluginSettingTab {
         this.previewPaint = null;
         this.pageEl.replaceChildren();
         this[page]();
+    }
+    updates() {
+        const p = this.p;
+        const section = this.section('تازه‌های نسخهٔ ۱.۰.۹', 'مرور تغییراتی که در این نسخه به Persian Reminder اضافه شده‌اند.');
+        const card = E(section, 'article', 'pr-settings-update-card');
+        E(card, 'span', 'pr-update-kicker', 'نسخهٔ ۱.۰.۹');
+        E(card, 'h3', '', 'یادآوری‌ها، درست در دل یادداشت‌ها');
+        E(card, 'p', '', 'از این نسخه می‌توانید یادآوری‌های هر یادداشت را در همان صفحه ببینید و یک کار تازه را بدون جابه‌جایی میان پنجره‌ها به همان یادداشت اضافه کنید.');
+        const code = E(card, 'code', 'pr-update-code', '```persian-reminder\n```');
+        code.setAttribute('dir', 'ltr');
+        const list = E(card, 'ul', 'pr-update-list');
+        for (const text of [
+            'نمایش فقط یادآوری‌های متعلق به یادداشت جاری، همراه با زمان سررسید و وضعیت انجام.',
+            'مرتب‌سازی بر اساس موعد و نمایش کارهای انجام‌شده پس از کارهای فعال.',
+            'افزودن یادآوری جدید از داخل ویجت و ثبت آن در همان یادداشت.',
+            'تازه‌شدن خودکار ویجت پس از ایجاد، ویرایش یا تکمیل یادآوری.'
+        ]) E(list, 'li', '', text);
+        E(card, 'p', 'pr-update-footnote', 'یادآوری‌ها از داده‌های فعلی افزونه خوانده می‌شوند؛ بنابراین نسخهٔ جداگانه یا فایل تکراری ساخته نمی‌شود. برای نمایش تاریخ شمسی، Persian Calendar باید فعال باشد.');
+        new Setting(section).setName('نمایش دوبارهٔ پیام به‌روزرسانی').setDesc('اگر پیام معرفی نسخه را بستید، می‌توانید آن را دوباره باز کنید.')
+            .addButton(button => button.setButtonText('نمایش پیام').onClick(() => p.showUpdateNotice(true)));
     }
     section(title, description) {
         const root = E(this.pageEl, 'section', 'pr-setting-section');
