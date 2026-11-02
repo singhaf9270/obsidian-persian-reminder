@@ -83,7 +83,7 @@ class Modal {
     open() { document.body.appendChild(this.modalEl); this.onOpen(); }
     close() { this.onClose(); this.modalEl.remove(); }
 }
-const obsidian = { Plugin: class {}, Modal, Setting, ItemView: class { constructor(leaf) { this.contentEl = leaf.contentEl; } },
+const obsidian = { Plugin: class {}, MarkdownRenderChild: class { constructor(containerEl) { this.containerEl = containerEl; } }, Modal, Setting, ItemView: class { constructor(leaf) { this.contentEl = leaf.contentEl; } },
     PluginSettingTab: class { constructor(app) { this.app = app; this.containerEl = document.createElement('div'); } },
     Notice: class {}, TFile: class {}, MarkdownView: class {}, Platform: { isMobile: true }, setIcon: () => {} };
 const external = id => {
