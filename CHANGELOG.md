@@ -11,7 +11,7 @@
 
 - Reuse the exact shared sidebar task-card component in the upcoming agenda widget.
 - Match sidebar layout, surfaces, native Obsidian tags, note path and action controls.
-- Preserve locations and hashtags, and treat date-only tasks as due at the end of the day without showing a fake time.
+- Preserve locations and hashtags, and treat date-only tasks as due at the end of the day without showing a fake time or exposing unsupported edit controls.
 
 ## Persian Reminder 1.0.10
 
