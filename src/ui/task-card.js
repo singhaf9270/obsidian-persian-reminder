@@ -21,8 +21,9 @@ function taskCard(p, parent, item, compact = false) {
     name.addEventListener('click', () => p.openFile(item));
     const date = fromISO(item.at), meta = E(body, 'div', 'pr-card-meta');
     if (date) {
-        const chip = B(meta, dateFa(p, date) + ' · ' + clockFa(p, date), 'calendar-clock', 'pr-card-date', () => p.edit(item, 'time'));
-        chip.title = 'تغییر تاریخ و ساعت';
+        const dateLabel = dateFa(p, date) + (item.hasTime === false ? '' : ' · ' + clockFa(p, date));
+        const chip = B(meta, dateLabel, item.hasTime === false ? 'calendar-days' : 'calendar-clock', 'pr-card-date', () => p.edit(item, 'time'));
+        chip.title = item.hasTime === false ? 'تغییر تاریخ' : 'تغییر تاریخ و ساعت';
     }
     if (date) paintRemaining(p, E(meta, 'span', 'pr-remaining'), item);
     if (item.place) {
