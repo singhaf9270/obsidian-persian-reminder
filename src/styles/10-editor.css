@@ -37,3 +37,6 @@
 .markdown-preview-view li.pr-colored-task.pr-style-vivid {
   background: linear-gradient(110deg,color-mix(in srgb,var(--pr-task-color) 7%,transparent),color-mix(in srgb,var(--pr-task-color) 26%,transparent));
 }
+
+
+.cm-line.pr-task-highlight { color: var(--pr-task-text-color, var(--text-normal)); }
