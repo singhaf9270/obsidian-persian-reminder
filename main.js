@@ -89,41 +89,7 @@ class ReminderCodeBlock extends MarkdownRenderChild {
             E(state, 'span', '', 'هیچ وظیفه‌ای برای امروز و آینده پیدا نشد.');
             return;
         }
-        tasks.forEach(item => {
-            const card = E(list, 'article', 'pr-agenda-card');
-            card.tabIndex = 0;
-            card.setAttribute('role', 'button');
-            card.setAttribute('aria-label', 'بازکردن یادداشت: ' + (item.title || 'بدون عنوان'));
-            card.title = 'برای رفتن به یادداشت کلیک کنید';
-            const open = () => p.openFile(item);
-            card.addEventListener('click', open);
-            card.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
-            });
-            const main = E(card, 'div', 'pr-agenda-card-main');
-            const content = E(main, 'div', 'pr-agenda-task-content');
-            E(content, 'span', 'pr-agenda-title', item.title || 'بدون عنوان');
-            if (item.tags?.length) {
-                const tags = E(content, 'div', 'pr-plain-tags');
-                for (const tag of item.tags) E(tags, 'a', 'tag', '#' + tag);
-            }
-            const meta = E(main, 'div', 'pr-agenda-task-meta'), date = fromISO(item.at);
-            if (date) {
-                const dateBadge = E(meta, 'div', 'pr-agenda-date-badge');
-                I(dateBadge, 'calendar-days'); E(dateBadge, 'span', '', dateFa(p, date));
-                if (item.hasTime) {
-                    const timeBadge = E(meta, 'div', 'pr-agenda-time-badge');
-                    I(timeBadge, 'clock-3'); E(timeBadge, 'span', '', clockFa(p, date));
-                }
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const dueDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-                const days = Math.round((dueDay - today) / 86400000);
-                const label = days === 0 ? 'امروز' : days === 1 ? 'فردا' :
-                    (p.api()?.toFaNumber?.(String(days)) || String(days)) + ' روز دیگر';
-                const badge = E(card, 'div', 'pr-agenda-days-left', label);
-                badge.classList.add(days === 0 ? 'today' : days === 1 ? 'tomorrow' : 'future');
-            }
-        });
+        tasks.forEach(item => taskCard(p, list, item, true));
     }
 }
 
