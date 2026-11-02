@@ -4,7 +4,7 @@ const __prNativeRequire = require;
 const __prModules = {
 "src/main.js": function(module, exports, require) {
 // Application entry point: lifecycle, vault index, notifications and commands.
-const { Plugin, Notice, MarkdownView, MarkdownRenderChild, TFile, Platform } = require('obsidian');
+const { Plugin, Modal, Notice, MarkdownView, MarkdownRenderChild, TFile, Platform } = require('obsidian');
 const { SIDE, DASH, DEFAULTS, PALETTES, TASK, PLACE } = require("src/core/constants.js");
 const { cssColor, parseTask, buildTask, status, paintTask } = require("src/core/tasks.js");
 const { fromISO, dateFa, clockFa } = require("src/core/dates.js");
@@ -100,6 +100,41 @@ class ReminderCodeBlock extends MarkdownRenderChild {
     }
 }
 
+
+class UpdateNotice extends Modal {
+    constructor(plugin) { super(plugin.app); this.plugin = plugin; }
+    onOpen() {
+        this.modalEl.addClass('pr-modal', 'pr-update-modal');
+        this.modalEl.setAttribute('role', 'dialog');
+        this.modalEl.setAttribute('aria-label', 'تغییرات نسخه ۱.۰.۹');
+        const root = this.contentEl;
+        root.replaceChildren();
+        const header = E(root, 'div', 'pr-modal-header');
+        I(header, 'sparkles');
+        const title = E(header, 'div');
+        E(title, 'strong', '', 'تازه‌های Persian Reminder');
+        E(title, 'small', '', 'نسخهٔ ۱.۰.۹');
+        const body = E(root, 'div', 'pr-modal-body pr-update-body');
+        E(body, 'p', 'pr-update-intro', 'در این نسخه می‌توانید برنامهٔ پیش رو را از تمام یادداشت‌های ولت، یک‌جا و با ظاهری شبیه یک فهرست برنامه‌ریزی مرتب ببینید.');
+        const feature = E(body, 'article', 'pr-update-feature');
+        E(feature, 'span', 'pr-update-kicker', 'قابلیت جدید');
+        E(feature, 'h3', '', 'برنامهٔ پیش رو در هر یادداشت');
+        E(feature, 'p', '', 'بلوک کد persian-reminder را در هر یادداشتی بگذارید تا همهٔ یادآوری‌های فعال و آیندهٔ کل ولت نمایش داده شوند؛ حتی اگر یادآوری در فایل دیگری ثبت شده باشد.');
+        const code = E(feature, 'code', 'pr-update-code', '```persian-reminder\\n```');
+        code.setAttribute('dir', 'ltr');
+        const list = E(body, 'ul', 'pr-update-list');
+        for (const text of [
+            'خواندن یادآوری‌ها از تمام یادداشت‌های Markdown ولت، نه فقط یادداشت میزبان بلوک کد.',
+            'نمایش کارهای انجام‌نشدهٔ امروز و آینده با مرتب‌سازی بر اساس زمان سررسید.',
+            'نمایش تاریخ شمسی، ساعت، برچسب امروز/فردا/روزهای آینده و نام یادداشت مبدأ.',
+            'بازکردن یادداشت اصلی با انتخاب هر کارت و به‌روزرسانی خودکار پس از تغییر یادآوری‌ها.'
+        ]) E(list, 'li', '', text);
+        E(body, 'p', 'pr-update-footnote', 'برای استفاده، یک بلوک کد با زبان persian-reminder در هر یادداشتی قرار دهید. برای نمایش تاریخ شمسی، Persian Calendar باید فعال باشد.');
+        const footer = E(root, 'div', 'pr-modal-footer');
+        B(footer, 'متوجه شدم', 'check', 'pr-save-btn', () => this.close());
+    }
+}
+
 module.exports = class PersianReminder extends Plugin {
     async onload() {
         this.settings = { ...DEFAULTS, ...await this.loadData() };
@@ -147,10 +182,18 @@ module.exports = class PersianReminder extends Plugin {
             if (this.unloading) return;
             await this.scheduler.start();
             if (!this.api()) new Notice('برای تقویم شمسی افزونه Persian Calendar را فعال کنید');
+            this.showUpdateNotice();
         });
     }
     onunload() { this.unloading = true; this.scheduler?.stop(); this.alertModal?.close(); for (const timer of this.scanTimers.values())
         window.clearTimeout(timer); this.app.workspace.detachLeavesOfType(SIDE); this.app.workspace.detachLeavesOfType(DASH); ['--pr-gradient-angle', '--pr-card-tint', '--pr-accent-color', '--pr-inline-text-color', '--pr-clock-color', '--pr-stamp-color', '--pr-soon-color', '--pr-overdue-color', ...['inline','date','remaining'].flatMap(t => ['a','b','border','text'].map(k => `--pr-${t}-${k}`))].forEach(v => document.body.style.removeProperty(v)); }
+    async showUpdateNotice(force = false) {
+        const version = '1.0.9';
+        if (!force && this.settings.lastSeenVersion === version) return;
+        this.settings.lastSeenVersion = version;
+        await this.persist();
+        new UpdateNotice(this).open();
+    }
     api() { return this.app.plugins.getPlugin('persian-calendar')?.api || null; }
     async persist() { await this.saveData(this.settings); }
     applyTheme() {
