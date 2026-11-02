@@ -192,7 +192,7 @@ module.exports = class PersianReminder extends Plugin {
             if (type !== 'inline') vars[`--pr-${type}-text`] = contrastText(v.a, v.b);
         }
         for (const [key, value] of Object.entries(vars)) document.body.style.setProperty(key, cssColor(value));
-        if (/^#[\\da-f]{6}$/i.test(this.settings.taskTextColor || ''))
+        if (/^#[\da-f]{6}$/i.test(this.settings.taskTextColor || ''))
             document.body.style.setProperty('--pr-task-text-color', this.settings.taskTextColor);
         else
             document.body.style.removeProperty('--pr-task-text-color');
