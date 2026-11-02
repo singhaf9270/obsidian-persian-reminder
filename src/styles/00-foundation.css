@@ -123,3 +123,17 @@
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
+
+
+/* Compact shortcut to the changelog at the top of settings. */
+.pr-settings-hero { display: flex; align-items: center; gap: 12px; }
+.pr-settings-hero > div { flex: 1; min-width: 0; }
+.pr-settings-whats-new {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  flex: 0 0 auto; min-height: 30px; padding: 5px 9px;
+  border: 1px solid var(--background-modifier-border); border-radius: 9px;
+  background: var(--background-secondary); color: var(--text-muted);
+  font-size: .76em; white-space: nowrap; box-shadow: none;
+}
+.pr-settings-whats-new:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.pr-settings-whats-new svg { width: 14px; height: 14px; }
