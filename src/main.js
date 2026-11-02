@@ -25,7 +25,8 @@ class ReminderCodeBlock extends MarkdownRenderChild {
         const p = this.plugin;
         if (!p.codeBlockRenderers.has(this.sourcePath))
             p.codeBlockRenderers.set(this.sourcePath, new Set());
-        p.codeBlockRenderers.get(this.sourcePath).add(this.render);
+        this.renderCallback = () => this.render();
+        p.codeBlockRenderers.get(this.sourcePath).add(this.renderCallback);
         this.render();
         const file = p.app.vault.getAbstractFileByPath(this.sourcePath);
         if (file instanceof TFile)
@@ -34,7 +35,7 @@ class ReminderCodeBlock extends MarkdownRenderChild {
     onunload() {
         const renderers = this.plugin.codeBlockRenderers.get(this.sourcePath);
         if (!renderers) return;
-        renderers.delete(this.render);
+        renderers.delete(this.renderCallback);
         if (!renderers.size) this.plugin.codeBlockRenderers.delete(this.sourcePath);
     }
     render() {
@@ -48,6 +49,7 @@ class ReminderCodeBlock extends MarkdownRenderChild {
             .sort((a, b) => Number(a.done) - Number(b.done) || a.at.localeCompare(b.at));
         E(heading, 'small', '', p.api() ? tasks.length + ' یادآوری' : 'برای نمایش تاریخ شمسی، Persian Calendar را فعال کنید');
         B(header, 'افزودن یادآوری', 'plus', 'pr-quiet-btn', () => {
+            if (!p.api()) return new Notice('افزونه Persian Calendar فعال نیست');
             const modal = new TaskModal(p);
             modal.destination = this.sourcePath;
             modal.open();
