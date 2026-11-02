@@ -5,7 +5,7 @@ const path = require('node:path');
 const notices = [];
 const external = id => {
     if (id === 'obsidian') return {
-        Plugin: class {}, Modal: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {},
+        Plugin: class {}, MarkdownRenderChild: class { constructor(containerEl) { this.containerEl = containerEl; } }, Modal: class {}, ItemView: class {}, PluginSettingTab: class {}, Setting: class {},
         Notice: class { constructor(text) { notices.push(text); } }, TFile: class {}, MarkdownView: class {}, Platform: { isMobile: false }
     };
     if (id === '@codemirror/view') return { ViewPlugin: { fromClass: () => ({}) }, Decoration: {}, WidgetType: class {} };
