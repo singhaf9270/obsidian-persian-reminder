@@ -125,6 +125,20 @@
   outline-offset: 2px;
 }
 
+
+/* Compact shortcut to the changelog at the top of settings. */
+.pr-settings-hero { display: flex; align-items: center; gap: 12px; }
+.pr-settings-hero > div { flex: 1; min-width: 0; }
+.pr-settings-whats-new {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  flex: 0 0 auto; min-height: 30px; padding: 5px 9px;
+  border: 1px solid var(--background-modifier-border); border-radius: 9px;
+  background: var(--background-secondary); color: var(--text-muted);
+  font-size: .76em; white-space: nowrap; box-shadow: none;
+}
+.pr-settings-whats-new:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.pr-settings-whats-new svg { width: 14px; height: 14px; }
+
 /* SOURCE: src/styles/15-swatches.css */
 /* Organized settings, using native Obsidian controls. */
 .pr-settings { --pr-edge: var(--background-modifier-border); --pr-layer: var(--background-secondary); max-width: 900px; margin-inline: auto; padding-block: 10px 24px; }
@@ -242,6 +256,9 @@
 .markdown-preview-view li.pr-colored-task.pr-style-vivid {
   background: linear-gradient(110deg,color-mix(in srgb,var(--pr-task-color) 7%,transparent),color-mix(in srgb,var(--pr-task-color) 26%,transparent));
 }
+
+
+.cm-line.pr-task-highlight { color: var(--pr-task-text-color, var(--text-normal)); }
 
 /* SOURCE: src/styles/20-modal-calendar.css */
 /* One scroll container with a fixed header and footer. */
@@ -490,6 +507,12 @@
 .pr-empty > span:first-child { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px dashed var(--pr-edge); border-radius: 15px; background: var(--pr-layer); }
 .pr-empty svg { width: 22px; height: 22px; }
 .pr-empty-add { align-self: center; margin-bottom: 15px; }
+
+
+/* Optional task title color; the empty setting follows the active Obsidian theme. */
+.pr-task-card .pr-title { color: var(--pr-task-text-color, var(--text-normal)); }
+.pr-task-card.pr-due-done .pr-title { color: var(--text-muted); }
+.pr-settings-preview .pr-preview-task-title { color: var(--pr-task-text-color, var(--text-normal)); }
 
 /* SOURCE: src/styles/50-dashboard.css */
 .pr-dashboard { container-type: inline-size; height: 100%; padding: 26px; overflow-y: auto; overflow-x: hidden; }
@@ -925,6 +948,9 @@
 .pr-settings-update-card { margin-block: 12px 18px; }
 .pr-settings-update-card > p { margin: 0; color: var(--text-muted); font-size: .88em; line-height: 1.9; }
 .pr-settings-update-card .pr-update-code { margin-block: 4px; }
+
+
+.markdown-preview-view li.task-list-item { color: var(--pr-task-text-color, inherit); }
 
 /* SOURCE: src/styles/85-badges.css */
 /* Independently configurable pill badges; selectors restricted to this plugin. */
