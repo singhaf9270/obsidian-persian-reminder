@@ -52,8 +52,8 @@ function editorExtension(p) {
                     if (!item)
                         continue;
                     const color = tagColor(p, item);
-                    if (color)
-                        ranges.push(Decoration.line({ attributes: { class: 'pr-task-highlight pr-style-' + p.settings.taskStyle, style: `--pr-task-color:${color};` } }).range(line.from));
+                    if (color || p.settings.taskTextColor)
+                        ranges.push(Decoration.line({ attributes: { class: 'pr-task-highlight pr-style-' + p.settings.taskStyle, style: color ? `--pr-task-color:${color};` : '' } }).range(line.from));
                     if (item.marker) {
                         const start = line.from + item.marker.from, end = line.from + item.marker.to;
                         const selection = view.state.selection.ranges.some(s => s.from <= end && s.to >= start && s.from !== s.to || s.head >= start && s.head <= end);
