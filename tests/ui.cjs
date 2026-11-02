@@ -101,7 +101,7 @@ const { SettingsTab } = load('src/settings.js');
 const { Sidebar } = load('src/views/sidebar.js');
 const { taskCard } = load('src/ui/task-card.js');
 const { iso } = load('src/core/dates.js');
-const p = new Plugin(); p.settings = structuredClone(DEFAULTS); p.index = new Map();
+const p = new Plugin(); p.settings = structuredClone(DEFAULTS); p.index = new Map(); p.codeBlockRenderers = new Map();
 p.app = { workspace: { getLeavesOfType: () => [], getActiveFile: () => null },
     plugins: { getPlugin: id => id === 'templater-obsidian' ? { settings: { templates_folder: 'Templates' } } : null },
     vault: { getMarkdownFiles: () => [{ path: 'Templates/Daily.md' }, { path: 'Unrelated.md' }] } };
