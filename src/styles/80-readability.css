@@ -11,3 +11,16 @@
 .pr-code-block-heading small { color: var(--text-muted); font-size: .78em; }
 .pr-code-block-list { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
 .pr-code-block .pr-empty { min-height: 90px; padding: 12px; }
+
+/* Version update announcement and changelog page. */
+.pr-update-modal .pr-update-body { display: flex; flex-direction: column; gap: 12px; }
+.pr-update-intro, .pr-update-feature p, .pr-update-footnote { margin: 0; color: var(--text-muted); font-size: .9em; line-height: 1.9; }
+.pr-update-feature, .pr-settings-update-card { display: flex; flex-direction: column; gap: 9px; padding: 16px; border: 1px solid var(--pr-edge); border-radius: 14px; background: var(--pr-layer); }
+.pr-update-kicker { align-self: flex-start; padding: 3px 9px; border-radius: 999px; background: var(--background-modifier-hover); color: var(--text-accent); font-size: .75em; font-weight: 650; }
+.pr-update-feature h3, .pr-settings-update-card h3 { margin: 0; color: var(--text-normal); font-size: 1em; }
+.pr-update-code { display: block; width: fit-content; max-width: 100%; padding: 9px 12px; border: 1px solid var(--background-modifier-border); border-radius: 9px; background: var(--background-primary); color: var(--text-normal); white-space: pre-wrap; }
+.pr-update-list { margin: 0; padding-inline-start: 1.4em; color: var(--text-normal); font-size: .88em; line-height: 2; }
+.pr-update-list li { padding-inline-start: 3px; margin-block: 3px; }
+.pr-settings-update-card { margin-block: 12px 18px; }
+.pr-settings-update-card > p { margin: 0; color: var(--text-muted); font-size: .88em; line-height: 1.9; }
+.pr-settings-update-card .pr-update-code { margin-block: 4px; }
