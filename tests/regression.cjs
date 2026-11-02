@@ -29,7 +29,7 @@ const p = new Plugin();
 p.settings = JSON.parse(JSON.stringify(DEFAULTS));
 p.settings.dateFormat = 'gregorian';
 p.settings.dailyFolder = 'Daily';
-p.index = new Map(); p.scanSerial = new Map();
+p.index = new Map(); p.codeBlockRenderers = new Map(); p.scanSerial = new Map();
 p.api = () => ({
     gregorianToJalali: (year, month, day) => year === 2026 && month === 10 && day === 24 ? { jy: 1405, jm: 8, jd: 2 } : null,
     toEnNumber: value => value.replace(/[۰-۹]/g, c => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))
