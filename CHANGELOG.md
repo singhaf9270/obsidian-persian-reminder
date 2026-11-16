@@ -1,3 +1,17 @@
+## Persian Reminder 1.0.13
+
+### فارسی
+
+- بازطراحی و بهبود انتخابگر ساعت Material Clock برای رابط فارسی و راست‌به‌چپ.
+- تثبیت جهت دایرهٔ ساعت و نمایش دیجیتال به‌صورت LTR، همراه با حفظ RTL برای عنوان‌ها، ورودی‌ها و دکمه‌ها.
+- هماهنگ‌سازی پس‌زمینه، عقربه، اعداد انتخاب‌شده و فیلدهای ورود دستی با رنگ‌های تم فعال Obsidian؛ بهبود نمایش در تم روشن و تاریک.
+
+### English
+
+- Improve the Material Clock time picker for Persian and RTL interfaces.
+- Keep the clock dial and digital time display LTR while preserving RTL layout for Persian headers, inputs, instructions and actions.
+- Align the clock face, hand, selected numbers and manual input fields with the active Obsidian theme in both light and dark modes.
+
 ## Persian Reminder 1.0.12
 
 ### فارسی
