@@ -965,3 +965,96 @@
 
 .pr-task-card .pr-plain-tags{display:flex;gap:5px;flex-wrap:wrap}
 /* Native Obsidian .tag class is left free for active theme and third-party CSS. */
+
+/* ==========================================================
+   اصلاح کامل انتخابگر ساعت (Material Clock) برای فارسی و RTL
+   ========================================================== */
+
+/* ۱. تنظیم جهت LTR برای بخش اصلی دایره ساعت جهت جلوگیری از به‌هم‌ریختگی عقربه و اعداد */
+.pr-material-clock {
+  --pr-lilac: var(--interactive-accent); /* اتصال متغیر مفقود شده به رنگ اصلی تم ابسیدین */
+  --pr-ink: var(--text-normal);
+  --pr-dim: var(--text-muted);
+  
+  direction: ltr !important; /* فیکس کردن جهت محاسبات دایره‌ای ساعت */
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px 0;
+}
+
+/* ۲. بازگردانی جهت راست‌به‌چپ (RTL) برای متن‌ها، هدر و دکمه‌ها جهت سازگاری با فارسی */
+.pr-material-header, 
+.pr-material-manual, 
+.pr-material-instructions,
+.pr-material-actions {
+  direction: rtl !important;
+  text-align: right;
+}
+
+.pr-material-display {
+  direction: ltr !important; /* نمایش ساعت دیجیتال به صورت استاندارد */
+}
+
+/* ۳. بهبود ظاهر و پس‌زمینه دایره ساعت */
+.pr-material-face {
+  background: radial-gradient(circle, var(--background-primary) 20%, var(--background-secondary) 100%);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border), 0 10px 30px rgba(0, 0, 0, 0.08);
+  border-radius: 50%;
+  position: relative;
+}
+
+/* ۴. استایل‌دهی دقیق به خط عقربه و دایره نوک آن (Knob) */
+.pr-material-hand {
+  stroke: var(--interactive-accent) !important;
+  stroke-width: 3.5px;
+  stroke-linecap: round;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.pr-material-knob {
+  fill: var(--interactive-accent) !important;
+  stroke: var(--background-primary);
+  stroke-width: 3px;
+}
+
+.pr-material-center {
+  fill: var(--interactive-accent) !important;
+}
+
+/* ۵. اعداد انتخاب شده و هماهنگی رنگ‌ها */
+.pr-material-number.is-selected {
+  background: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+  font-weight: 700;
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  z-index: 3;
+}
+
+.pr-material-hour.is-active,
+.pr-material-minute.is-active {
+  background: color-mix(in srgb, var(--interactive-accent) 20%, var(--background-secondary)) !important;
+  color: var(--text-normal) !important;
+  border-color: var(--interactive-accent) !important;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* ۶. زیبا سازی فیلدهای دستی وارد کردن ساعت و دقیقه */
+.pr-material-input {
+  border-radius: 10px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  text-align: center;
+  font-weight: 600;
+}
+
+.pr-material-input:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+}
